@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://bootswatch.com/4/darkly/bootstrap.min.css">
+    <link rel="stylesheet" href="connect.css">
+    <title>Viper Connect</title>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary customnav">
+        <img src="logo.svg" class="navbar-brand"></img>
+    </nav>
+    <div class="container">
+        <h1 class="viper-header"></h1>
+        <h3 class="viper-subheader">Welcome to the Viper VPN service. Once you're connected, you don't need to keep this application open.</h3>
+        <div id="connection" class="connection">
+            <center>
+                    <div class="la-ball-beat la-dark la-3x">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                    </div>
+            </center>
+        </div>
+        <div class="card border-secondary mb-3" style="max-width: 100%;">
+            <div class="card-header">Viper for Mobile</div>
+            <div class="card-body">
+                <h4 class="card-title">Connect to Viper from a mobile device</h4>
+                <p class="card-text">Enter your email address below and you'll receive instructions on how to setup Viper on your mobile device.</p>
+                <form action="">
+                    <span><input type="email" name="email" class="email_form" placeholder="name@example.com" required></span>
+                    <span><input type="submit" class="btn btn-success email_submit"></span>
+                </form>
+            </div>
+          </div>
+        <div class="footer">
+            <p>Built on Electron with open source NodeJS modules. Trademarks are the property of their respective owners.</p>
+        </div>
+    </div>
+    <script>
+        require('./connect.js')
+    </script>
+</body>
