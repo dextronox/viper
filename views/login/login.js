@@ -32,14 +32,21 @@ function setupEventListeners() {
                 $("#submitDiv").html(`<p class="submit" id="submit">Login</p>`)
                 setupEventListeners()
             }
-        }).pipe(fs.createWriteStream(`current.ovpn`).on("finish", () => {
+        }).pipe(fs.createWriteStream(`current_vpn.ovpn`).on("finish", () => {
             console.log(requestResponse)
             if (requestResponse.statusCode === 200) {
-                fs.writeFile("./current.txt", username.charAt(0).toUpperCase() + username.slice(1), function (err) {
+                fs.writeFile("./current_user.txt", username.charAt(0).toUpperCase() + username.slice(1), function (err) {
                     if (err) {
-                        alert(`Unable to write information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
+                        alert(`Unable to write current user information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
+                    } else {
+                        fs.writeFile('./current_login.txt', `Basic ${btoa(username + ":" + password)}`, (err) => {
+                            if (err) {
+                                alert(`Unable to write current login information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
+                            } else {
+                                main.login()
+                            }
+                        })
                     }
-                    main.login()
                 })
             }
         }))

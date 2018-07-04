@@ -1,6 +1,7 @@
 window.Bootstrap = require('bootstrap')
 const sudo = require('sudo-prompt');
 const fs = require('fs')
+const request = require('request')
 var $ = jQuery = require('jquery');
 var options = {
     name: 'Viper'
@@ -10,7 +11,7 @@ setupDisplay()
 
 function setupDisplay() {
     let currentName
-    fs.readFile('./current.txt', function read(err, data) {
+    fs.readFile('./current_user.txt', function read(err, data) {
         if (err) {
             console.log(error)
             $(".viper-header").html(`Hello.`)
@@ -43,7 +44,7 @@ function setupEventListeners () {
     $("#connect").click(function() {
         console.log("Connect clicked")
         $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
-        sudo.exec(`openvpn --config current.ovpn`, options, (error, stdout, stderr) => {
+        sudo.exec(`openvpn --config current_vpn.ovpn`, options, (error, stdout, stderr) => {
             if (error) {
                 console.log(error)
                 if (warning === 0) {
@@ -71,6 +72,51 @@ function setupEventListeners () {
             }
             console.log(stdout)
             setupDisplay()
+        })
+    })
+
+    $("#vipermobilesubmit").click(function() {
+        let current_user_data, current_login_data, current_email_data = $("#vipermobileemail").val()
+        console.log("Viper for Mobile submit clicked")
+        console.log($("#vipermobileemail").val())
+        $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
+        fs.readFile('./current_user.txt', "utf8", function read(err, data) {
+            if (err) {
+                //Unable to read current user file
+            } else {
+                console.log(data)
+                current_user_data = data
+                fs.readFile('./current_login.txt', "utf8", function read(err, data) {
+                    if (err) {
+                        //Unable to read current login file
+                    } else {
+                        console.log(data)
+                        current_login_data = data
+                        let requestConfig = {
+                            url: 'http://localhost:3001/mobile',
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            json: {
+                                "Name":current_user_data,
+                                "Login":current_login_data,
+                                "Email":current_email_data
+                            }
+                        }
+                        request(requestConfig, (err, response, body) => {
+                            if (response.statusCode === 200) {
+                                //Email sent successfully
+                            } else {
+                                //Email failed to send
+                            }
+                            console.log(body)
+                            console.log(response)
+                        })
+                    }
+                })
+            }
+            
         })
     })
 }

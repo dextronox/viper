@@ -1,0 +1,21 @@
+{
+  "name": "viper_api",
+  "version": "1.0.0",
+  "description": "Viper API",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "@dextronox/viper"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.4",
+    "express": "^4.16.3",
+    "request": "^2.87.0"
+  }
+}
