@@ -6,7 +6,7 @@ const url = require('url')
 let loginWindow, connectWindow
 
 function createLoginWindow () {
-    loginWindow = new BrowserWindow({width: 800, height: 600})
+    loginWindow = new BrowserWindow({width: 800, height: 600, icon: "./icon.png"})
     loginWindow.loadURL(url.format({
         pathname: path.join(__dirname, './views/login/login.html'),
         protocol: 'file:',
@@ -19,7 +19,7 @@ function createLoginWindow () {
 }
 
 function createConnectWindow () {
-    connectWindow = new BrowserWindow({width: 800, height: 800})
+    connectWindow = new BrowserWindow({width: 800, height: 800, icon: "./icon.png"})
     connectWindow.loadURL(url.format({
     pathname: path.join(__dirname, './views/connect/connect.html'),
     protocol: 'file:',

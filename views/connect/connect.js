@@ -10,14 +10,12 @@ var options = {
 setupDisplay()
 
 function setupDisplay() {
-    let currentName
     fs.readFile('./current_user.txt', function read(err, data) {
         if (err) {
             console.log(error)
             $(".viper-header").html(`Hello.`)
         } else {
             $(".viper-header").html(`Hello, ${data}`)
-            currentName = data
         }
     })
     sudo.exec('tasklist', options, (error, stdout, stderr) => {
@@ -93,7 +91,7 @@ function setupEventListeners () {
                         console.log(data)
                         current_login_data = data
                         let requestConfig = {
-                            url: 'http://localhost:3001/mobile',
+                            url: 'http://139.99.198.205:3001/mobile',
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
