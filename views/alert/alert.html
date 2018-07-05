@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="alert.css">
+    <title>Viper Connect</title>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary customnav">
+        <img src="logo.svg" class="navbar-brand"></img>
+    </nav>
+    <div class="container">
+        <div id="alert">
+        </div>
+        <h1 class="viper-header"></h1>
+        <div class="alert alert-danger">
+            <strong>Alert!</strong> We've detected you don't have OpenVPN installed. Click <a id="install" href="#" class="alert-link">here</a> to download the latest version. OpenVPN is the driver we use to connect your device to our VPN.
+        </div>
+        <div class="footer">
+            <p>Built on Electron with open source NodeJS modules. Trademarks are the property of their respective owners.</p>
+        </div>
+    </div>
+    <script>
+        require('./alert.js')
+    </script>
+</body>

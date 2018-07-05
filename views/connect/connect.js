@@ -1,4 +1,11 @@
+//Get remote module
+const remote = require('electron').remote
+//Require main process
+const main = remote.require('./main.js')
 window.Bootstrap = require('bootstrap')
+//Non elevated
+const cmd = require('node-cmd')
+//Elevated
 const sudo = require('sudo-prompt');
 const fs = require('fs')
 const request = require('request')
@@ -7,7 +14,19 @@ var options = {
     name: 'Viper'
 }
 
-setupDisplay()
+OpenVPNCheck()
+
+function OpenVPNCheck() {
+    cmd.get('openvpn --version', (err, data, stderr) => {
+        if (!data.includes("built on")) {
+            console.log("No OpenVPN install found.")
+            main.alert()
+        } else {
+            console.log("OpenVPN install found!")
+            setupDisplay()
+        }
+    })
+}
 
 function setupDisplay() {
     fs.readFile('./current_user.txt', function read(err, data) {
@@ -18,12 +37,12 @@ function setupDisplay() {
             $(".viper-header").html(`Hello, ${data}`)
         }
     })
-    sudo.exec('tasklist', options, (error, stdout, stderr) => {
+    cmd.get('tasklist', (error, data, stderr) => {
         if (error) {
             console.log(error)
             $("#connection").html(`<p>${error}</p>`)
             $("#connection").append("<p>Press CTRL + R to retry.</p>")
-        } else if (stdout.includes("openvpn")) {//OpenVPN process is running, therefore a VPN must be connected
+        } else if (data.includes("openvpn")) {//OpenVPN process is running, therefore a VPN must be connected
             console.log("OpenVPN is currently connected.")
             $("#connection").html('<button id="disconnect" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Disconnect</button>')
             $("#connection").append(`<p class="message">It may take a couple seconds to finish connecting. If the VPN doesn't appear to be working, feel free to click disconnect and then reconnect.</p>`)
@@ -46,7 +65,7 @@ function setupEventListeners () {
             if (error) {
                 console.log(error)
                 if (warning === 0) {
-                    alert("The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection.")
+                    alert("The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection. This error could also have been triggered by you disconnecting within 30 seconds of initially connecting.")
                 }
             }
             console.log(stdout)
@@ -105,9 +124,15 @@ function setupEventListeners () {
                         request(requestConfig, (err, response, body) => {
                             if (response.statusCode === 200) {
                                 $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
+                                setTimeout(() => {
+                                    $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                                }, 3000)
                             } else {
                                 //Email failed to send
                                 $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
+                                setTimeout(() => {
+                                    $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                                }, 3000)
                             }
                             console.log(body)
                             console.log(response)

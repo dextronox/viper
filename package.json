@@ -16,8 +16,10 @@
     "child_process": "^1.0.2",
     "fs": "0.0.1-security",
     "jquery": "^3.3.1",
+    "node-cmd": "^3.0.0",
     "popper.js": "^1.14.3",
     "request": "^2.87.0",
+    "shell": "^0.5.0",
     "sudo-prompt": "^8.2.0"
   }
 }

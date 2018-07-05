@@ -7,9 +7,9 @@ const request = require('request')
 const fs = require('fs')
 var $ = jQuery = require('jquery');
 
-setupEventListeners()
+setupPage()
 
-function setupEventListeners() {
+function setupPage() {
     $('.message a').click(function(){
         $('form').animate({height: "toggle", opacity: "toggle"}, "slow");
     });
@@ -30,7 +30,7 @@ function setupEventListeners() {
             } else {
                 alert(`Error downloading configuation file. This is more likely because your username and/or password was incorrect.\r\nDetails of the error - Response Code: ${response.statusCode}, Response Message: ${response.statusMessage}`, `Viper Alert`)
                 $("#submitDiv").html(`<p class="submit" id="submit">Login</p>`)
-                setupEventListeners()
+                setupPage()
             }
         }).pipe(fs.createWriteStream(`current_vpn.ovpn`).on("finish", () => {
             console.log(requestResponse)
