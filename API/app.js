@@ -24,7 +24,7 @@ app.post("/mobile", (req, res) => {
     }
     let requestResponse, attachmentRaw
     let requestOptions = {
-        url: `https://unrestrict.me/viper/${req.body["Name"].toLowerCase()}.ovpn`,
+        url: `http://139.99.198.205/profiles/${req.body["Name"].toLowerCase()}.ovpn`,
         headers: {
             Authorization: req.body["Login"]
         }
