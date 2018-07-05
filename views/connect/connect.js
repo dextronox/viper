@@ -106,9 +106,10 @@ function setupEventListeners () {
                         }
                         request(requestConfig, (err, response, body) => {
                             if (response.statusCode === 200) {
-                                //Email sent successfully
+                                $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
                             } else {
                                 //Email failed to send
+                                $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
                             }
                             console.log(body)
                             console.log(response)
@@ -116,7 +117,6 @@ function setupEventListeners () {
                     }
                 })
             }
-            
         })
     })
 }
