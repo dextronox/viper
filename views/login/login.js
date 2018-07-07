@@ -5,11 +5,21 @@ const main = remote.require('./main.js')
 //Load jquery module
 const request = require('request')
 const fs = require('fs')
+const log = require('electron-log')
 var $ = jQuery = require('jquery');
 
 setupPage()
 
 function setupPage() {
+    fs.readFile('./current_login.txt', 'utf8', (err, data) => {
+        if (err) {
+            //If file doesn't exist, user must have logged out.
+            log.info("Not currently logged in.")
+        } else {
+            //File exists, assume all files already exist and log in.
+            main.connect()
+        }
+    })
     $('.message a').click(function(){
         $('form').animate({height: "toggle", opacity: "toggle"}, "slow");
     });
@@ -22,9 +32,9 @@ function setupPage() {
                 Authorization: `Basic ${btoa(username + ":" + password)}`
             }
         }
-        console.log(`Basic ${btoa(username + ":" + password)}`)
+        log.info(`Basic ${btoa(username + ":" + password)}`)
         request.get(requestOptions).on('response', (response) => {
-            console.log("Attempted to grab: " + JSON.stringify(response))
+            log.info("Attempted to grab: " + JSON.stringify(response))
             if (response.statusCode === 200) {
                 requestResponse = response
             } else {
@@ -33,7 +43,7 @@ function setupPage() {
                 setupPage()
             }
         }).pipe(fs.createWriteStream(`current_vpn.ovpn`).on("finish", () => {
-            console.log(requestResponse)
+            log.info(requestResponse)
             if (requestResponse.statusCode === 200) {
                 fs.writeFile("./current_user.txt", username.charAt(0).toUpperCase() + username.slice(1), function (err) {
                     if (err) {
@@ -43,7 +53,7 @@ function setupPage() {
                             if (err) {
                                 alert(`Unable to write current login information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
                             } else {
-                                main.login()
+                                main.connect()
                             }
                         })
                     }

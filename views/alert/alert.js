@@ -5,6 +5,7 @@ const cmd = require('node-cmd')
 const sudo = require('sudo-prompt');
 const fs = require('fs')
 const request = require('request')
+const log = require('electron-log')
 var $ = jQuery = require('jquery');
 var options = {
     name: 'Viper'
@@ -15,7 +16,7 @@ setupDisplay()
 function setupDisplay() {
     fs.readFile('./current_user.txt', function read(err, data) {
         if (err) {
-            console.log(error)
+            log.error(error)
             $(".viper-header").html(`Hello.`)
             setupEventListeners()
         } else {
