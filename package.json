@@ -9,19 +9,21 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack:win32": "electron-packager . Viper --platform=win32 --arch=ia32 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_user.txt --ignore=current_login.txt --ignore=current_vpn.ovpn",
-    "pack:win64": "electron-packager . Viper --platform=win32 --arch=x64 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_user.txt --ignore=current_login.txt --ignore=current_vpn.ovpn"
+    "pack:win32": "electron-packager . Viper --platform=win32 --arch=ia32 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_user.txt --ignore=current_login.txt --ignore=current_vpn.ovpn --out dist/",
+    "pack:win64": "electron-packager . Viper --platform=win32 --arch=x64 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_user.txt --ignore=current_login.txt --ignore=current_vpn.ovpn --out dist/"
   },
   "author": "Daniel Jennings",
   "license": "MIT License",
   "devDependencies": {
-    "electron": "^2.0.4"
+    "electron": "^2.0.4",
+    "electron-winstaller": "^2.6.4"
   },
   "dependencies": {
     "bootstrap": "^4.1.1",
     "child_process": "^1.0.2",
     "electron-log": "^2.2.16",
     "fs": "0.0.1-security",
+    "gulp": "^3.9.1",
     "jquery": "^3.3.1",
     "node-cmd": "^3.0.0",
     "popper.js": "^1.14.3",
