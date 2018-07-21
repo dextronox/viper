@@ -27,7 +27,7 @@ function setupPage() {
         $("#submitDiv").html(`<div class="la-ball-beat la-dark"><div></div><div></div><div></div></div>`)
         let username = document.getElementById('username').value, password = document.getElementById('password').value, requestResponse
         let requestOptions = {
-            url: `http://139.99.198.205/profiles/${username}.ovpn`,
+            url: `https://viper.dextronox.com/profiles/${username}.ovpn`,
             headers: {
                 Authorization: `Basic ${btoa(username + ":" + password)}`
             }
