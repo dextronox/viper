@@ -95,7 +95,7 @@ function setupDisplay() {
             log.error(error)
             $("#connection").html(`<p>${error}</p>`)
             $("#connection").append("<p>Press CTRL + R to retry.</p>")
-        } else if (data.includes("openvpn")) {//OpenVPN process is running, therefore a VPN must be connected
+        } else if (data.includes("openvpn.exe")) {//OpenVPN process is running, therefore a VPN must be connected
             log.info("OpenVPN is currently connected.")
             $("#connection").html('<button id="disconnect" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Disconnect</button>')
             $("#connection").append(`<p class="message">It may take a couple seconds to finish connecting. If the VPN doesn't appear to be working, feel free to click disconnect and then reconnect. You may see an error when disconnecting, which can be ignored.</p>`)
@@ -147,7 +147,7 @@ function setupEventListeners () {
         sudo.exec('taskkill /IM openvpn.exe /F', options, (error, stdout, stderr) => {
             if (error) {
                 log.error(error)
-                alert("You did not grant permission. The VPN will remain connected.")
+                alert(`An error occurred. ${error}`)
             }
             log.info(stdout)
             setupDisplay()
