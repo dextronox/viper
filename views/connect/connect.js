@@ -14,10 +14,78 @@ var $ = jQuery = require('jquery');
 var options = {
     name: 'Viper'
 }
+const swal = require("sweetalert")
 
 environmentCheck()
 
 function environmentCheck() {
+    //This is technically a display thing, but it doesn't need to run everytime a button is clicked.
+    $("#version").html(`${remote.app.getVersion()}`)
+    let requestConfig = {
+        url: 'https://viper.dextronox.com/ver/',
+        method: 'GET',
+    }
+    request(requestConfig, (err, response, body) => {
+        log.info(`Local version for comparison: ${parseFloat(remote.app.getVersion())}`)
+        log.info(`Remote version for comparison: ${parseFloat(body)}`)
+        log.info(`Comparison: ${parseFloat(body) <= parseFloat(remote.app.getVersion())}`)
+        if (err) {
+            log.error("Unable to get latest version number.")
+        }
+        if (parseFloat(body) <= parseFloat(remote.app.getVersion())) {
+            $("#version").append(" (Latest Version)")
+            $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
+            $("#logout").click(() => {
+                fs.unlink('./current_login.txt', (err) => {
+                    if (err) {
+                        alert(`There was an error logging out. Viper will now close.`, `Viper Alert`)
+                        main.app.quit()
+                    }
+                    main.login()
+                })
+            })
+        } else {
+            $("#version").append(` (<a href="#" style="color:black" id="update">Update Available</a>)`)
+            $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
+            $("#update").click(() => {
+                main.update()
+            })
+            $("#logout").click(() => {
+                fs.unlink('./current_login.txt', (err) => {
+                    if (err) {
+                        alert(`There was an error logging out. Viper will now close.`, `Viper Alert`)
+                        main.app.quit()
+                    }
+                    main.login()
+                })
+            })
+            swal({
+                title: "Update Available",
+                text: "A new version of Viper is available. Whilst it is not necessary to update, new versions improve user experience and add functionality.",
+                icon: "warning",
+                buttons: {
+                    ignore: {
+                        text: "Ignore",
+                        closeModal: true,
+                        className: "swal-button--cancel",
+                        value: null
+                    },
+                    update: {
+                        text: "Update",
+                        closeModal: false
+                    }
+                }
+            }).then(willUpdate => {
+                if (willUpdate) {
+                    //Update
+                    log.info("Updating.")
+                    main.update()
+                } else {
+                    log.info("Not updating.")
+                }
+            })
+        }
+    })
     //Check current user exists
     fs.readFile('./current_user.txt', 'utf8', (err) => {
         if (err) {
@@ -81,7 +149,6 @@ function environmentCheck() {
 }
 
 function setupDisplay() {
-    $("#version").html(`${remote.app.getVersion()} (<a href="#" style="color:black" id="logout">Logout</a>)`)
     fs.readFile('./current_user.txt', function read(err, data) {
         if (err) {
             log.error(error)
@@ -111,15 +178,6 @@ function setupDisplay() {
 
 function setupEventListeners () {
     let warning = 0
-    $("#logout").click(() => {
-        fs.unlink('./current_login.txt', (err) => {
-            if (err) {
-                alert(`There was an error logging out. Viper will now close.`, `Viper Alert`)
-                main.app.quit()
-            }
-            main.login()
-        })
-    })
     $("#connect").click(function() {
         log.info("Connect clicked")
         $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
@@ -127,7 +185,7 @@ function setupEventListeners () {
             if (error) {
                 log.error(error)
                 if (warning === 0) {
-                    alert("The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection. This error could also have been triggered by you disconnecting within 30 seconds of initially connecting, in which case you can ignore this alert.")
+                    alert("The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection. This error could also have been triggered by you disconnecting within 30 seconds of initially connecting, in which case you can ignore this alert.", "Viper Alert")
                 }
             }
             log.info(stdout)
@@ -198,8 +256,6 @@ function setupEventListeners () {
                                     setupEventListeners()
                                 }, 3000)
                             }
-                            log.info(body)
-                            log.info(response)
                         })
                     }
                 })
