@@ -1,0 +1,11 @@
+{
+    "src": "dist/Viper-win32-ia32/",
+    "dest": "dist/installers/ia32/",
+    "name": "viper",
+    "productName": "Viper VPN",
+    "description": "Viper VPN Client",
+    "copyright": "MIT License",
+    "homepage": "https://viper.dextronox.com",
+    "icon": "icons/icon.ico",
+    "noMsi": true
+}
