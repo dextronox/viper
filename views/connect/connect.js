@@ -10,15 +10,26 @@ const sudo = require('sudo-prompt');
 const fs = require('fs')
 const request = require('request')
 const log = require('electron-log')
+const os = require('os')
 var $ = jQuery = require('jquery');
 var options = {
     name: 'Viper'
 }
 const swal = require("sweetalert")
+let ovpnPath
 
 environmentCheck()
 
 function environmentCheck() {
+    if (os.arch() === "x64") {
+        ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
+        log.info(`OpenVPN directory set to ${ovpnPath}`)
+    } else if (os.arch() === "ia32") {
+        ovpnPath = "C:\\Program Files (x86)\\OpenVPN\\bin"
+        log.info(`OpenVPN directory set to ${ovpnPath}`)
+    } else {
+        log.error("Arch check fail")
+    }
     //This is technically a display thing, but it doesn't need to run everytime a button is clicked.
     $("#version").html(`${remote.app.getVersion()}`)
     let requestConfig = {
@@ -97,9 +108,10 @@ function environmentCheck() {
         }
 
     })
-    cmd.get('openvpn --version', (err, data, stderr) => {
+    cmd.get(`"${ovpnPath}\openvpn.exe" --version`, (err, data, stderr) => {
         if (!data.includes("built on")) {
-            log.info("No OpenVPN install found.")
+            log.info(`No OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+            log.info(data)
             main.alert()
         } else {
             log.info("OpenVPN install found!")
@@ -141,11 +153,12 @@ function setupEventListeners () {
     $("#connect").click(function() {
         log.info("Connect clicked")
         $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
-        sudo.exec(`openvpn --config current_vpn.ovpn`, options, (error, stdout, stderr) => {
+        sudo.exec(`"${ovpnPath}\\openvpn.exe" --config current_vpn.ovpn`, options, (error, stdout, stderr) => {
             if (error) {
                 log.error(error)
                 if (warning === 0) {
                     alert("The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection. This error could also have been triggered by you disconnecting within 30 seconds of initially connecting, in which case you can ignore this alert.", "Viper Alert")
+                    setupDisplay()
                 }
             }
             log.info(stdout)
