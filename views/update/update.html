@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="update.css">
+    <title>Viper Update</title>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary customnav">
+        <img src="logo.svg" class="navbar-brand"></img>
+        <p style="float: right; margin-bottom: 0px" id="return"><a href="#" id="return" style="color:black">Return to Viper</a></p>
+    </nav>
+    <div class="container">
+        <div class="info">
+            <h3 class="viper-subheader">Update Manager</h3>
+            <div class="row" style="justify-content: center;">
+                <div class="col-md-6" id="download" style="border-color: #525252; border-style: solid; padding-bottom: 1.5em; padding-top: 1.5em">
+                    <p>Download the installer</p>
+                    <button class="btn btn-primary btn-block" id="downloadButton">Download!</button>
+                </div>
+                <div class="col-md-6" id="run" style="border-color: #525252; border-style: solid; padding-bottom: 1.5em; padding-top: 1.5em">
+                    <p>Run the installer</p>
+                    <button class="btn btn-primary btn-block" id="runButton">Run!</button>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Built on Electron with open source NodeJS modules. Trademarks are the property of their respective owners.</p>
+        </div>
+    </div>
+    <script>
+        require('./update.js')
+    </script>
+</body>
