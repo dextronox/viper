@@ -9,12 +9,12 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack:win32": "electron-packager . Viper --platform=win32 --arch=ia32 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_user.txt --ignore=current_login.txt --ignore=current_vpn.ovpn --out dist/",
-    "pack:win64": "electron-packager . Viper --platform=win32 --arch=x64 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_user.txt --ignore=current_login.txt --ignore=current_vpn.ovpn --out dist/",
-    "installer:win64": "electron-installer-windows --config dist/config_x64.json",
-    "installer:win32": "electron-installer-windows --config dist/config_ia32.json"
+    "pack:win32": "electron-packager . Viper --platform=win32 --arch=ia32 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_vpn.ovpn --ignore=settings.json --ignore=ovpninstaller.exe --out dist/",
+    "pack:win64": "electron-packager . Viper --platform=win32 --arch=x64 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_vpn.ovpn --ignore=settings.json --ignore=ovpninstaller.exe --out dist/",
+    "installer:win32": "electron-installer-windows --config dist/config_ia32.json",
+    "installer:win64": "electron-installer-windows --config dist/config_x64.json"
   },
-  "author": "Daniel Jennings",
+  "author": "Viper",
   "license": "MIT License",
   "devDependencies": {
     "electron": "^2.0.4",

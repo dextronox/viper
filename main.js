@@ -75,7 +75,7 @@ function createUpdateWindow () {
     protocol: 'file:',
     slashes: true
     }))
-    //alertWindow.webContents.openDevTools()
+    //updateWindow.webContents.openDevTools()
     updateWindow.on('closed', function () {
         updateWindow = null
     })
@@ -111,13 +111,14 @@ exports.login = () => {
 exports.connect = () => {
     //Open new window first to prevent suicide
     createConnectWindow()
-    if (loginWindow) {
-        loginWindow.close()
-    }
-    if (updateWindow) {
-        updateWindow.close()
-    }
+    loginWindow.close()
+    updateWindow.close()
     
+}
+
+exports.connectAlert = () => {
+    createConnectWindow()
+    alertWindow.close()
 }
 
 exports.alert = () => {

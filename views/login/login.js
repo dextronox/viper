@@ -11,13 +11,27 @@ var $ = jQuery = require('jquery');
 setupPage()
 
 function setupPage() {
-    fs.readFile('./current_login.txt', 'utf8', (err, data) => {
+    fs.readFile('./settings.json', 'utf8', (err, data) => {
         if (err) {
-            //If file doesn't exist, user must have logged out.
-            log.info("Not currently logged in.")
+            //If file doesn't exist, this is a first launch.
+            log.info("Could not read settings file. Perhaps it doesn't exist?")
+            //Create settings file.
+            fs.writeFile("./settings.json", '{}', function (err) {
+                if (err) {
+                    alert(`Unable to create settings file. \r\nDetails of the error - ${err}`, `Viper Alert`)
+                } else {
+                    log.info('Settings file created.')
+                }
+            })
         } else {
-            //File exists, assume all files already exist and log in.
-            main.connect()
+            //Check if current user is defined.
+            if (JSON.parse(data)["current_user"]) {
+                log.info("Currently logged in.")
+                main.connect()
+            } else {
+                log.info("Not logged in.")
+            }
+            
         }
     })
     $('.message a').click(function(){
@@ -44,18 +58,16 @@ function setupPage() {
             }
         }).pipe(fs.createWriteStream(`current_vpn.ovpn`).on("finish", () => {
             log.info(requestResponse)
+            let settings = {
+                "current_user": username.charAt(0).toUpperCase() + username.slice(1),
+                "current_login": `Basic ${btoa(username + ":" + password)}`
+            }
             if (requestResponse.statusCode === 200) {
-                fs.writeFile("./current_user.txt", username.charAt(0).toUpperCase() + username.slice(1), function (err) {
+                fs.writeFile("./settings.json", JSON.stringify(settings), function (err) {
                     if (err) {
-                        alert(`Unable to write current user information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
+                        alert(`Unable to write current user and login information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
                     } else {
-                        fs.writeFile('./current_login.txt', `Basic ${btoa(username + ":" + password)}`, (err) => {
-                            if (err) {
-                                alert(`Unable to write current login information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
-                            } else {
-                                main.connect()
-                            }
-                        })
+                        main.connect()
                     }
                 })
             }

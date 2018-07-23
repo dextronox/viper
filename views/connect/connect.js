@@ -36,13 +36,7 @@ function environmentCheck() {
             $("#version").append(" (Latest Version)")
             $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
             $("#logout").click(() => {
-                fs.unlink('./current_login.txt', (err) => {
-                    if (err) {
-                        alert(`There was an error logging out. Viper will now close.`, `Viper Alert`)
-                        main.app.quit()
-                    }
-                    main.login()
-                })
+                logout()
             })
         } else {
             $("#version").append(` (<a href="#" style="color:black" id="update">Update Available</a>)`)
@@ -51,13 +45,7 @@ function environmentCheck() {
                 main.update()
             })
             $("#logout").click(() => {
-                fs.unlink('./current_login.txt', (err) => {
-                    if (err) {
-                        alert(`There was an error logging out. Viper will now close.`, `Viper Alert`)
-                        main.app.quit()
-                    }
-                    main.login()
-                })
+                logout()
             })
             swal({
                 title: "Update Available",
@@ -86,56 +74,28 @@ function environmentCheck() {
             })
         }
     })
-    //Check current user exists
-    fs.readFile('./current_user.txt', 'utf8', (err) => {
-        if (err) {
-            fs.unlink('./current_login.txt', (err) => {
-                if (err) {
-                    alert(`Whilst performing an environment check, we found that the file "current_user.txt" did not exist. We were unable to form a clean login by deleting "current_login.txt". It's probably best to reinstall Viper.`, `Viper Alert`)
-                }
-                main.login()
-            })
-            fs.unlink('./current_vpn.ovpn', (err) => {
-                if (err) {
-                    alert(`Whilst performing an environment check, we found that the file "current_user.txt" did not exist. We were unable to form a clean login by deleting "current_vpn.ovpn". It's probably best to reinstall Viper.`, `Viper Alert`)
-                }
-                main.login()
-            })
-        }
-    })
     //Check VPN file exists
     fs.readFile('./current_vpn.ovpn', 'utf8', (err) => {
         if (err) {
-            fs.unlink('./current_login.txt', (err) => {
-                if (err) {
-                    alert(`Whilst performing an environment check, we found that the file "current_vpn.ovpn" did not exist. We were unable to form a clean login by deleting "current_login.txt". It's probably best to reinstall Viper.`, `Viper Alert`)
-                }
-                main.login()
-            })
-            fs.unlink('./current_user.txt', (err) => {
-                if (err) {
-                    alert(`Whilst performing an environment check, we found that the file "current_vpn.ovpn" did not exist. We were unable to form a clean login by deleting "current_user.txt". It's probably best to reinstall Viper.`, `Viper Alert`)
-                }
-                main.login()
-            })
+            alert('Could not read VPN configuration file. Application will now logout.', 'Viper Alert')
+            log.error(`current_vpn.ovpn not found. Error: ${err}`)
+            logout()
         }
     })
-    //Check authentication file exists
-    fs.readFile('./current_login.txt', 'utf8', (err) => {
+
+    fs.readFile('./settings.json', 'utf8', (err, data) => {
         if (err) {
-            fs.unlink('./current_vpn.ovpn', (err) => {
-                if (err) {
-                    alert(`Whilst performing an environment check, we found that the file "current_login.txt" did not exist. We were unable to form a clean login by deleting "current_vpn.ovpn". It's probably best to reinstall Viper.`, `Viper Alert`)
-                }
-                main.login()
-            })
-            fs.unlink('./current_user.txt', (err) => {
-                if (err) {
-                    alert(`Whilst performing an environment check, we found that the file "current_login.txt" did not exist. We were unable to form a clean login by deleting "current_user.txt". It's probably best to reinstall Viper.`, `Viper Alert`)
-                }
-                main.login()
-            })
+            alert(`Could not read settings file. Error: ${err}`, `Viper Alert`)
+        } else {
+            if (!JSON.parse(data)["current_user"] || !JSON.parse(data)["current_login"]) {
+                alert('current_user or current_login is not defined. Application will now logout.', 'Viper Alert')
+                log.error(`current_user or current_login is not defined.`)
+                logout()
+            } else {
+                log.info("Environment check complete.")
+            }
         }
+
     })
     cmd.get('openvpn --version', (err, data, stderr) => {
         if (!data.includes("built on")) {
@@ -149,12 +109,12 @@ function environmentCheck() {
 }
 
 function setupDisplay() {
-    fs.readFile('./current_user.txt', function read(err, data) {
+    fs.readFile('./settings.json', function read(err, data) {
         if (err) {
             log.error(error)
             $(".viper-header").html(`Hello.`)
         } else {
-            $(".viper-header").html(`Hello, ${data}`)
+            $(".viper-header").html(`Hello, ${JSON.parse(data)["current_user"]}`)
         }
     })
     cmd.get('tasklist', (error, data, stderr) => {
@@ -192,7 +152,7 @@ function setupEventListeners () {
         })
         setTimeout(function() {
             setupDisplay()
-        }, 3000)
+        }, 5000)
         setTimeout(function() {
             warning = 1
             log.info("Now assuming connected")
@@ -213,53 +173,56 @@ function setupEventListeners () {
     })
 
     $("#vipermobilesubmit").click(function() {
-        let current_user_data, current_login_data, current_email_data = $("#vipermobileemail").val()
+        let settings_data, current_email_data = $("#vipermobileemail").val()
         log.info("Viper for Mobile submit clicked")
         log.info($("#vipermobileemail").val())
         $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
-        fs.readFile('./current_user.txt', "utf8", function read(err, data) {
+        fs.readFile('./settings.json', "utf8", function read(err, data) {
             if (err) {
-                //Unable to read current user file
+                //Unable to read settings file
             } else {
+                settings_data = JSON.parse(data)
                 log.info(data)
-                current_user_data = data
-                fs.readFile('./current_login.txt', "utf8", function read(err, data) {
-                    if (err) {
-                        //Unable to read current login file
+                current_login_data = data
+                let requestConfig = {
+                    url: 'https://viper.dextronox.com/api/mobile',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    json: {
+                        "Name":settings_data["current_user"],
+                        "Login":settings_data["current_login"],
+                        "Email":current_email_data
+                    }
+                }
+                request(requestConfig, (err, response, body) => {
+                    if (response.statusCode === 200) {
+                        $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
+                        setTimeout(() => {
+                            $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                            setupEventListeners()
+                        }, 3000)
                     } else {
-                        log.info(data)
-                        current_login_data = data
-                        let requestConfig = {
-                            url: 'http://139.99.198.205:3001/mobile',
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            json: {
-                                "Name":current_user_data,
-                                "Login":current_login_data,
-                                "Email":current_email_data
-                            }
-                        }
-                        request(requestConfig, (err, response, body) => {
-                            if (response.statusCode === 200) {
-                                $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
-                                setTimeout(() => {
-                                    $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
-                                    setupEventListeners()
-                                }, 3000)
-                            } else {
-                                //Email failed to send
-                                $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
-                                setTimeout(() => {
-                                    $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
-                                    setupEventListeners()
-                                }, 3000)
-                            }
-                        })
+                        //Email failed to send
+                        $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
+                        setTimeout(() => {
+                            $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                            setupEventListeners()
+                        }, 3000)
                     }
                 })
             }
         })
+    })
+}
+
+function logout() {
+    fs.writeFile('./settings.json', '{}', (err) => {
+        if (err) {
+            alert(`There was an error logging out. Viper will now close.`, `Viper Alert`)
+            main.app.quit()
+        }
+        main.login()
     })
 }

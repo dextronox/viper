@@ -1,37 +1,86 @@
 window.Bootstrap = require('bootstrap')
+//Get remote module
+const remote = require('electron').remote
+//Require main process
+const main = remote.require('./main.js')
 //Non elevated
 const cmd = require('node-cmd')
 //Elevated
 const sudo = require('sudo-prompt');
 const fs = require('fs')
 const request = require('request')
+const progress = require('request-progress');
 const log = require('electron-log')
+const os = require('os')
+//Update
+const exec = require('child_process').execFile;
+var executablePath = "./ovpninstall.exe";
 var $ = jQuery = require('jquery');
-var options = {
-    name: 'Viper'
+var sudoOptions = {
+    name: "Viper"
 }
 
 setupDisplay()
 
 function setupDisplay() {
-    fs.readFile('./current_user.txt', function read(err, data) {
+    fs.unlink("./ovpninstaller.exe", (err) => {
         if (err) {
-            log.error(error)
-            $(".viper-header").html(`Hello.`)
-            setupEventListeners()
+            log.error("Unable to delete ovpninstaller.exe. This is probably good.")
         } else {
-            $(".viper-header").html(`Hello, ${data}`)
-            setupEventListeners()
+            log.info("ovpninstaller.exe was deleted. OpenVPN has been previously installed with Viper.")
         }
     })
+    $("#download").css("display", "block")
+    $("#run").css("display", "none")
+    $("#relaunch").css("display", "none")
+    $("#downloadButton").click(() => {
+        downloadUpdate()
+    })
+    $("#runButton").click(() => {
+        runUpdate()
+    })
+    $("#relaunchButton").click(() => {
+        relaunch()
+    })
+
+    setupEventListeners()
+
 }
 
+function downloadUpdate() {
+    log.info(`Downloading setup for OS: ${os.arch()}`)
+    $("#downloadButton").replaceWith(`<p>Downloading OpenVPN. Please wait patiently.</p><div class="progress"><div class="progress-bar" id="downloadProgress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>`)
+    progress(request(`https://build.openvpn.net/downloads/releases/latest/openvpn-install-latest-stable.exe`), {}).on('progress', (state) => {
+        log.info(`Status: ${state.percent}`)
+        $('#downloadProgress').css('width', `${state.percent * 100}%`)
+    }).on('error', (err) => {
+        log.error(`Error downloading update: ${err}`)
+    }).on('end', () => {
+        $("#run").css("display", "block")
+        $("#download").css("display", "none")
+    }).pipe(fs.createWriteStream('./ovpninstaller.exe'))
+}
+
+function runUpdate() {
+    log.info("Beginning update.")
+    let close = 0
+    sudo.exec('start ovpninstaller.exe', sudoOptions, (err, stdout, stderr) => {
+        if (err) {
+            log.error(`Could not run update.exe. Error: ${err}`)
+            alert(`Could not complete the installation. ${err}`, `Viper Alert`)
+            remote.getCurrentWindow().reload()
+        }
+    })
+    $("#relaunch").css("display", "block")
+    $("#run").css("display", "none")
+
+}
+
+function relaunch() {
+    remote.app.relaunch()
+    remote.app.quit()
+}
 
 function setupEventListeners () {
-    
-}
 
-$("#install").click(() => {
-    require('electron').shell.openExternal("https://openvpn.net/index.php/open-source/downloads.html")
-})
-    
+}
