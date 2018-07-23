@@ -34,7 +34,7 @@ function createLoginWindow () {
         protocol: 'file:',
         slashes: true
     }))
-    loginWindow.webContents.openDevTools({mode: "undocked"})
+    //loginWindow.webContents.openDevTools({mode: "undocked"})
     loginWindow.on('closed', function () {
         loginWindow = null
     })
@@ -48,7 +48,7 @@ function createConnectWindow () {
     protocol: 'file:',
     slashes: true
     }))
-    connectWindow.webContents.openDevTools()
+    //connectWindow.webContents.openDevTools()
     connectWindow.on('closed', function () {
         connectWindow = null
     })
@@ -65,6 +65,19 @@ function createAlertWindow () {
     //alertWindow.webContents.openDevTools()
     alertWindow.on('closed', function () {
         alertWindow = null
+    })
+}
+function createUpdateWindow () {
+    updateWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false})
+    updateWindow.setMenu(null)
+    updateWindow.loadURL(url.format({
+    pathname: path.join(__dirname, './views/update/update.html'),
+    protocol: 'file:',
+    slashes: true
+    }))
+    //alertWindow.webContents.openDevTools()
+    updateWindow.on('closed', function () {
+        updateWindow = null
     })
 }
 
@@ -86,19 +99,40 @@ app.on('activate', function () {
 exports.login = () => {
     //Open new window first to prevent suicide
     createLoginWindow()
-    connectWindow.close()
-    alertWindow.close()
+    if (connectWindow) {
+        connectWindow.close()
+    }
+    if (alertWindow) {
+        alertWindow.close()
+    }
+    
 }
 
 exports.connect = () => {
     //Open new window first to prevent suicide
     createConnectWindow()
-    loginWindow.close()
+    if (loginWindow) {
+        loginWindow.close()
+    }
+    if (updateWindow) {
+        updateWindow.close()
+    }
+    
 }
 
 exports.alert = () => {
     createAlertWindow()
-    connectWindow.close()
+    if (connectWindow) {
+        connectWindow.close()
+    }
+    
+}
+exports.update = () => {
+    createUpdateWindow()
+    if (connectWindow) {
+        connectWindow.close()
+    }
+    
 }
 
 //Squirrel
