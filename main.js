@@ -1,10 +1,12 @@
 const electron = require('electron')
+const ipcMain = require('electron').ipcMain
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const url = require('url')
 const log = require('electron-log')
 const fs = require('fs')
+const internetAvailable = require('internet-available')
 let loginWindow, connectWindow
 
 // Same as for console transport
@@ -27,7 +29,7 @@ log.transports.file.streamConfig = { flags: 'w' };
 log.transports.file.stream = fs.createWriteStream('log.txt');
 
 function createLoginWindow () {
-    loginWindow = new BrowserWindow({width: 800, height: 600, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 600, transparent: false})
+    loginWindow = new BrowserWindow({width: 800, height: 600, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 600, transparent: false, title: "Viper Login", resizable: false})
     loginWindow.setMenu(null)
     loginWindow.loadURL(url.format({
         pathname: path.join(__dirname, './views/login/login.html'),
@@ -41,7 +43,7 @@ function createLoginWindow () {
 }
 
 function createConnectWindow () {
-    connectWindow = new BrowserWindow({width: 800, height: 850, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 850, transparent: false})
+    connectWindow = new BrowserWindow({width: 800, height: 850, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 850, transparent: false, title: "Viper Connect", resizable: false})
     connectWindow.setMenu(null)
     connectWindow.loadURL(url.format({
     pathname: path.join(__dirname, './views/connect/connect.html'),
@@ -55,7 +57,7 @@ function createConnectWindow () {
 }
 
 function createAlertWindow () {
-    alertWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false})
+    alertWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Alert", resizable: false})
     alertWindow.setMenu(null)
     alertWindow.loadURL(url.format({
     pathname: path.join(__dirname, './views/alert/alert.html'),
@@ -68,7 +70,7 @@ function createAlertWindow () {
     })
 }
 function createUpdateWindow () {
-    updateWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false})
+    updateWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
     updateWindow.setMenu(null)
     updateWindow.loadURL(url.format({
     pathname: path.join(__dirname, './views/update/update.html'),
@@ -203,4 +205,30 @@ if (handleSquirrelEvent()) {
         app.quit();
         return true;
     }
-  };
+};
+
+let checkNetwork
+
+ipcMain.on('networkCheck', (event, args) => {
+    if (args === 1) {
+        checkNetwork = 1
+        networkCheck()
+    } else if (args === 0) {
+        checkNetwork = 0
+    }
+})
+
+function networkCheck () {
+    if (checkNetwork === 1) {
+        internetAvailable({
+            timeout: 1500,
+            retires: 5
+        }).then(() => {
+            log.info("Internet connection detected.")
+            setTimeout(() => {networkCheck()})
+        }).catch(() => {
+            log.info("No internet connection detected.")
+        })
+    }
+
+}
