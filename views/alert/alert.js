@@ -12,6 +12,7 @@ const request = require('request')
 const progress = require('request-progress');
 const log = require('electron-log')
 const os = require('os')
+const swal = require("sweetalert")
 //Update
 const exec = require('child_process').execFile;
 var executablePath = "./ovpninstall.exe";
@@ -48,7 +49,7 @@ function setupDisplay() {
 }
 
 function downloadUpdate() {
-    log.info(`Downloading setup for OS: ${os.arch()}`)
+    log.info(`Downloading latest OpenVPN installer.`)
     $("#downloadButton").replaceWith(`<p>Downloading OpenVPN. Please wait patiently.</p><div class="progress"><div class="progress-bar" id="downloadProgress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>`)
     progress(request(`https://build.openvpn.net/downloads/releases/latest/openvpn-install-latest-stable.exe`), {}).on('progress', (state) => {
         log.info(`Status: ${state.percent}`)
@@ -67,7 +68,7 @@ function runUpdate() {
     sudo.exec('start ovpninstaller.exe', sudoOptions, (err, stdout, stderr) => {
         if (err) {
             log.error(`Could not run update.exe. Error: ${err}`)
-            alert(`Could not complete the installation. ${err}`, `Viper Alert`)
+            swalAlert(`Error`, `Could not complete the installation. ${err}`, `error`)
             remote.getCurrentWindow().reload()
         }
     })
@@ -83,4 +84,20 @@ function relaunch() {
 
 function setupEventListeners () {
 
+}
+
+function swalAlert(title, body, icon) {
+    swal({
+        title: title,
+        text: body,
+        icon: icon,
+        buttons: {
+            ignore: {
+                text: "Okay",
+                closeModal: true,
+                className: "swal-button--cancel",
+                value: null
+            }
+        }
+    })
 }
