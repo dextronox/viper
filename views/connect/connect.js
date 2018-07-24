@@ -3,6 +3,7 @@ const remote = require('electron').remote
 //Require main process
 const main = remote.require('./main.js')
 window.Bootstrap = require('bootstrap')
+const ipcRenderer = require('electron').ipcRenderer
 //Non elevated
 const cmd = require('node-cmd')
 //Elevated
@@ -33,23 +34,21 @@ function environmentCheck() {
     //This is technically a display thing, but it doesn't need to run everytime a button is clicked.
     $("#version").html(`${remote.app.getVersion()}`)
     let requestConfig = {
-        url: 'https://viper.dextronox.com/ver/',
+        url: `https://viper.dextronox.com/ver/?${Math.floor(Math.random() * Math.floor(300))}`,
         method: 'GET',
     }
     request(requestConfig, (err, response, body) => {
         log.info(`Local version for comparison: ${parseFloat(remote.app.getVersion())}`)
         log.info(`Remote version for comparison: ${parseFloat(body)}`)
-        log.info(`Comparison: ${parseFloat(body) <= parseFloat(remote.app.getVersion())}`)
+        log.info(`Newest version: ${parseFloat(body) <= parseFloat(remote.app.getVersion())}`)
         if (err) {
             log.error("Unable to get latest version number.")
-        }
-        if (parseFloat(body) <= parseFloat(remote.app.getVersion())) {
-            $("#version").append(" (Latest Version)")
             $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
             $("#logout").click(() => {
                 logout()
             })
-        } else {
+        }
+        if (parseFloat(body) > parseFloat(remote.app.getVersion())) {
             $("#version").append(` (<a href="#" style="color:black" id="update">Update Available</a>)`)
             $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
             $("#update").click(() => {
@@ -83,12 +82,18 @@ function environmentCheck() {
                     log.info("Not updating.")
                 }
             })
+        } else {
+            $("#version").append(" (Latest Version)")
+            $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
+            $("#logout").click(() => {
+                logout()
+            })
         }
     })
     //Check VPN file exists
     fs.readFile('./current_vpn.ovpn', 'utf8', (err) => {
         if (err) {
-            alert('Could not read VPN configuration file. Application will now logout.', 'Viper Alert')
+            swalAlert(`Error`, 'Could not read VPN configuration file. Application will now logout.', 'error')
             log.error(`current_vpn.ovpn not found. Error: ${err}`)
             logout()
         }
@@ -96,10 +101,10 @@ function environmentCheck() {
 
     fs.readFile('./settings.json', 'utf8', (err, data) => {
         if (err) {
-            alert(`Could not read settings file. Error: ${err}`, `Viper Alert`)
+            swalAlert(`Error`, `Could not read settings file. Error: ${err}`, `error`)
         } else {
             if (!JSON.parse(data)["current_user"] || !JSON.parse(data)["current_login"]) {
-                alert('current_user or current_login is not defined. Application will now logout.', 'Viper Alert')
+                swalAlert(`Error`, 'current_user or current_login is not defined. Application will now logout.', 'error')
                 log.error(`current_user or current_login is not defined.`)
                 logout()
             } else {
@@ -108,7 +113,7 @@ function environmentCheck() {
         }
 
     })
-    cmd.get(`"${ovpnPath}\openvpn.exe" --version`, (err, data, stderr) => {
+    cmd.get(`"${ovpnPath}\\openvpn.exe" --version`, (err, data, stderr) => {
         if (!data.includes("built on")) {
             log.info(`No OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
             log.info(data)
@@ -132,8 +137,8 @@ function setupDisplay() {
     cmd.get('tasklist', (error, data, stderr) => {
         if (error) {
             log.error(error)
-            $("#connection").html(`<p>${error}</p>`)
-            $("#connection").append("<p>Press CTRL + R to retry.</p>")
+            swalAlert(`Error`, `Unable to check whether OpenVPN is running.`, `error`)
+            $("#connection").append("<p>Viper should be restarted</p>")
         } else if (data.includes("openvpn.exe")) {//OpenVPN process is running, therefore a VPN must be connected
             log.info("OpenVPN is currently connected.")
             $("#connection").html('<button id="disconnect" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Disconnect</button>')
@@ -153,23 +158,34 @@ function setupEventListeners () {
     $("#connect").click(function() {
         log.info("Connect clicked")
         $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
-        sudo.exec(`"${ovpnPath}\\openvpn.exe" --config current_vpn.ovpn`, options, (error, stdout, stderr) => {
+        cmd.get('tasklist', (error, data, stderr) => {
             if (error) {
                 log.error(error)
-                if (warning === 0) {
-                    alert("The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection. This error could also have been triggered by you disconnecting within 30 seconds of initially connecting, in which case you can ignore this alert.", "Viper Alert")
+                $("#connection").html(`<p>${error}</p>`)
+            } else if (data.includes("openvpn.exe")) {
+                setupDisplay()
+            } else {
+                sudo.exec(`"${ovpnPath}\\openvpn.exe" --config current_vpn.ovpn`, options, (error, stdout, stderr) => {
+                    if (error) {
+                        log.error(error)
+                        if (warning === 0) {
+                            swalAlert(`Error`, "The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection. This error could also have been triggered by you disconnecting within 30 seconds of initially connecting, in which case you can ignore this alert.", "error")
+                            setupDisplay()
+                        }
+                    }
+                    log.info(stdout)
+                })
+                setTimeout(function() {
+                    ipcRenderer.send('networkCheck', 1)
                     setupDisplay()
-                }
+                }, 5000)
+                setTimeout(function() {
+                    warning = 1
+                    log.info("Now assuming connected")
+                }, 45000) 
             }
-            log.info(stdout)
         })
-        setTimeout(function() {
-            setupDisplay()
-        }, 5000)
-        setTimeout(function() {
-            warning = 1
-            log.info("Now assuming connected")
-        }, 45000)
+
     })
     
     $("#disconnect").click(function() {
@@ -178,9 +194,10 @@ function setupEventListeners () {
         sudo.exec('taskkill /IM openvpn.exe /F', options, (error, stdout, stderr) => {
             if (error) {
                 log.error(error)
-                alert(`An error occurred. ${error}`)
+                swalAlert(`Error`, `An error occurred whilst trying to disconnect. Error: ${error}`, `error`)
             }
             log.info(stdout)
+            ipcRenderer.send('networkCheck', 0)
             setupDisplay()
         })
     })
@@ -233,9 +250,25 @@ function setupEventListeners () {
 function logout() {
     fs.writeFile('./settings.json', '{}', (err) => {
         if (err) {
-            alert(`There was an error logging out. Viper will now close.`, `Viper Alert`)
+            swalAlert(`Error`, `There was an error logging out. To ensure stability, Viper will now close. This error was caused by the settings.json file being unwritable.`, `error`)
             main.app.quit()
         }
         main.login()
+    })
+}
+
+function swalAlert(title, body, icon) {
+    swal({
+        title: title,
+        text: body,
+        icon: icon,
+        buttons: {
+            ignore: {
+                text: "Okay",
+                closeModal: true,
+                className: "swal-button--cancel",
+                value: null
+            }
+        }
     })
 }
