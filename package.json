@@ -4,7 +4,7 @@
     "type": "git",
     "url": "https://github.com/dextronox/viper.git"
   },
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Viper VPN Application",
   "main": "main.js",
   "scripts": {
@@ -26,6 +26,7 @@
     "electron-log": "^2.2.16",
     "fs": "0.0.1-security",
     "gulp": "^3.9.1",
+    "internet-available": "^1.0.0",
     "jquery": "^3.3.1",
     "node-cmd": "^3.0.0",
     "os": "^0.1.1",
