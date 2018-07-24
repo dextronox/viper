@@ -29,6 +29,7 @@
     "internet-available": "^1.0.0",
     "jquery": "^3.3.1",
     "node-cmd": "^3.0.0",
+    "node-notifier": "^5.2.1",
     "os": "^0.1.1",
     "popper.js": "^1.14.3",
     "request": "^2.87.0",

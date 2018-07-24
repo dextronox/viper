@@ -7,6 +7,7 @@ const url = require('url')
 const log = require('electron-log')
 const fs = require('fs')
 const internetAvailable = require('internet-available')
+const notify = require('node-notifier')
 let loginWindow, connectWindow
 
 // Same as for console transport
@@ -221,13 +222,17 @@ ipcMain.on('networkCheck', (event, args) => {
 function networkCheck () {
     if (checkNetwork === 1) {
         internetAvailable({
-            timeout: 1500,
+            timeout: 3000,
             retires: 5
         }).then(() => {
             log.info("Internet connection detected.")
             setTimeout(() => {networkCheck()})
         }).catch(() => {
             log.info("No internet connection detected.")
+            notify.notify({
+                title: 'Viper VPN Alert',
+                message: `We've detected that you've lost connection to the internet. Once you regain connection, you might have to disconnect and reconnect to Viper.`
+            });
         })
     }
 
