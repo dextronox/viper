@@ -12,6 +12,7 @@ const request = require('request')
 const progress = require('request-progress');
 const log = require('electron-log')
 const os = require('os')
+const swal = require("sweetalert")
 //Update
 const exec = require('child_process').execFile;
 var executablePath = "./new_build.exe";
@@ -51,6 +52,8 @@ function downloadUpdate() {
     request(requestConfig, (err, response, body) => {
         if (err) {
             log.error("Could not get latest version.")
+            swalAlert(`Error`, `We were not able to retrieve the latest version number of Viper. This is most likely due to network connectivity issues. This error does NOT mean we failed to download the newest installer, as we didn't get to that stage.`, `error`)
+            setupDisplay()
         }
         version = body
         progress(request(`https://viper.dextronox.com/builds/${version}/${os.arch()}.exe`), {}).on('progress', (state) => {
@@ -58,6 +61,8 @@ function downloadUpdate() {
             $('#downloadProgress').css('width', `${state.percent * 100}%`)
         }).on('error', (err) => {
             log.error(`Error downloading update: ${err}`)
+            swalAlert(`Error`, `We were not able to download the latest version of Viper. This is most likely due to network connectivity issues.`, `error`)
+            setupDisplay()
         }).on('end', () => {
             $("#run").css("display", "block")
             $("#download").css("display", "none")
@@ -70,22 +75,35 @@ function runUpdate() {
     let close = 0
     exec(executablePath, (err, data) => {
         if (err) {
-            log.error(`Could not run update.exe. Error: ${err}`)
-            alert(`Could not complete the update. ${err}`, `Viper Alert`)
+            log.error(`Could not run new_build.exe. Error: ${err}`)
+            swalAlert(`Error`, `Could not open the update executable. ${err}`, `error`)
             close = 1
             setupDisplay()
-        }     
-    })
-    setTimeout(() => {
-        if (close === 0) {
+        } else {
             window.close()
         }
-    }, 500)
+    })
 
 }
 
 function setupEventListeners () {
     $("#return").click(() => {
         main.connect()
+    })
+}
+
+function swalAlert(title, body, icon) {
+    swal({
+        title: title,
+        text: body,
+        icon: icon,
+        buttons: {
+            ignore: {
+                text: "Okay",
+                closeModal: true,
+                className: "swal-button--cancel",
+                value: null
+            }
+        }
     })
 }
