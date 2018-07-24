@@ -7,6 +7,7 @@ const request = require('request')
 const fs = require('fs')
 const log = require('electron-log')
 var $ = jQuery = require('jquery');
+const swal = require("sweetalert")
 
 setupPage()
 
@@ -18,7 +19,7 @@ function setupPage() {
             //Create settings file.
             fs.writeFile("./settings.json", '{}', function (err) {
                 if (err) {
-                    alert(`Unable to create settings file. \r\nDetails of the error - ${err}`, `Viper Alert`)
+                    swalAlert(`Error`, `Unable to create settings file. \r\nDetails of the error - ${err}`, `error`)
                 } else {
                     log.info('Settings file created.')
                 }
@@ -52,7 +53,7 @@ function setupPage() {
             if (response.statusCode === 200) {
                 requestResponse = response
             } else {
-                alert(`Error downloading configuation file. This is more likely because your username and/or password was incorrect.\r\nDetails of the error - Response Code: ${response.statusCode}, Response Message: ${response.statusMessage}`, `Viper Alert`)
+                swalAlert(`Error`, `Error downloading configuation file. This is more likely because your username and/or password was incorrect.\r\nDetails of the error - Response Code: ${response.statusCode}, Response Message: ${response.statusMessage}`, `error`)
                 $("#submitDiv").html(`<p class="submit" id="submit">Login</p>`)
                 setupPage()
             }
@@ -65,12 +66,28 @@ function setupPage() {
             if (requestResponse.statusCode === 200) {
                 fs.writeFile("./settings.json", JSON.stringify(settings), function (err) {
                     if (err) {
-                        alert(`Unable to write current user and login information to disk. \r\nDetails of the error - ${err}`, `Viper Alert`)
+                        swalAlert(`Error`, `Unable to write current user and login information to disk. \r\nDetails of the error - ${err}`, `error`)
                     } else {
                         main.connect()
                     }
                 })
             }
         }))
+    })
+}
+
+function swalAlert(title, body, icon) {
+    swal({
+        title: title,
+        text: body,
+        icon: icon,
+        buttons: {
+            ignore: {
+                text: "Okay",
+                closeModal: true,
+                className: "swal-button--cancel",
+                value: null
+            }
+        }
     })
 }
