@@ -1,5 +1,8 @@
 const electron = require('electron')
 const ipcMain = require('electron').ipcMain
+const Menu = require('electron').Menu
+const Tray = require('electron').Tray
+const exec = require('child_process').exec
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 const path = require('path')
@@ -8,10 +11,11 @@ const log = require('electron-log')
 const fs = require('fs')
 const internetAvailable = require('internet-available')
 const notify = require('node-notifier')
-let loginWindow, connectWindow
+const os = require('os')
+var windowCloseCheck, loginWindow = null, connectWindow = null, alertWindow = null, updateWindow = null, checkNetwork = null, ovpnCurrentConnection = null, tray = null, contextMenu = null
 
 // Same as for console transport
-log.transports.file.level = 'silly';
+log.transports.file.level = 'info';
 log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
  
 // Set approximate maximum log size in bytes. When it exceeds,
@@ -30,6 +34,9 @@ log.transports.file.streamConfig = { flags: 'w' };
 log.transports.file.stream = fs.createWriteStream('log.txt');
 
 function createLoginWindow () {
+    if (tray) {
+        tray.destroy()
+    }
     loginWindow = new BrowserWindow({width: 800, height: 600, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 600, transparent: false, title: "Viper Login", resizable: false})
     loginWindow.setMenu(null)
     loginWindow.loadURL(url.format({
@@ -41,47 +48,132 @@ function createLoginWindow () {
     loginWindow.on('closed', function () {
         loginWindow = null
     })
+    if (connectWindow != null) {
+        windowCloseCheck = 1
+        connectWindow.close()
+        connectWindow = null
+    }
+    if (alertWindow != null) {
+        loginWindow.close()
+        loginWindow = null
+    }
+    if (updateWindow != null) {
+        updateWindow.close()
+        updateWindow = null
+    }
 }
 
 function createConnectWindow () {
+    windowCloseCheck = null
+    //log.info(`Login: ${loginWindow} Connect: ${connectWindow} Alert: ${alertWindow} Update: ${updateWindow} Network Check: ${checkNetwork} OpenVPN Current Connection: ${ovpnCurrentConnection} Tray: ${tray} Context Menu: ${contextMenu}`)
     connectWindow = new BrowserWindow({width: 800, height: 850, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 850, transparent: false, title: "Viper Connect", resizable: false})
     connectWindow.setMenu(null)
     connectWindow.loadURL(url.format({
-    pathname: path.join(__dirname, './views/connect/connect.html'),
-    protocol: 'file:',
-    slashes: true
+        pathname: path.join(__dirname, './views/connect/connect.html'),
+        protocol: 'file:',
+        slashes: true
     }))
     //connectWindow.webContents.openDevTools()
-    connectWindow.on('closed', function () {
-        connectWindow = null
+    connectWindow.on('minimize',function(event){
+        event.preventDefault();
+        connectWindow.hide();
+    });
+    connectWindow.on('close', (event) => {
+        if (!windowCloseCheck) {
+            event.preventDefault()
+            connectWindow.hide()
+        }
     })
+    tray = new Tray('./icons/icon.ico')
+    contextMenu = Menu.buildFromTemplate([
+        {
+            label: 'Show Viper', click: () => {
+                connectWindow.show()
+            }
+        },
+        {
+            label: 'Quit', click: () => {
+                windowCloseCheck = 1
+                app.quit()
+            }
+        }
+    ])
+    tray.setContextMenu(contextMenu)
+    tray.setToolTip('Show Viper VPN')
+    tray.on('click', () => {
+        connectWindow.show()
+    })
+    if (alertWindow != null) {
+        alertWindow.close()
+        alertWindow = null
+    }
+    if (loginWindow != null) {
+        loginWindow.close()
+        loginWindow = null
+    }
+    if (updateWindow != null) {
+        updateWindow.close()
+        updateWindow = null
+    }
 }
 
 function createAlertWindow () {
+    if (tray) {
+        tray.destroy()
+    }
     alertWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Alert", resizable: false})
     alertWindow.setMenu(null)
     alertWindow.loadURL(url.format({
-    pathname: path.join(__dirname, './views/alert/alert.html'),
-    protocol: 'file:',
-    slashes: true
+        pathname: path.join(__dirname, './views/alert/alert.html'),
+        protocol: 'file:',
+        slashes: true
     }))
     //alertWindow.webContents.openDevTools()
     alertWindow.on('closed', function () {
         alertWindow = null
     })
+    if (connectWindow != null) {
+        windowCloseCheck = 1
+        connectWindow.close()
+        connectWindow = null
+    }
+    if (loginWindow != null) {
+        loginWindow.close()
+        loginWindow = null
+    }
+    if (updateWindow != null) {
+        updateWindow.close()
+        updateWindow = null
+    }
 }
 function createUpdateWindow () {
+    if (tray) {
+        tray.destroy()
+    }
     updateWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
     updateWindow.setMenu(null)
     updateWindow.loadURL(url.format({
-    pathname: path.join(__dirname, './views/update/update.html'),
-    protocol: 'file:',
-    slashes: true
+        pathname: path.join(__dirname, './views/update/update.html'),
+        protocol: 'file:',
+        slashes: true
     }))
     //updateWindow.webContents.openDevTools()
     updateWindow.on('closed', function () {
         updateWindow = null
     })
+    if (connectWindow != null) {
+        windowCloseCheck = 1
+        connectWindow.close()
+        connectWindow = null
+    }
+    if (loginWindow != null) {
+        loginWindow.close()
+        loginWindow = null
+    }
+    if (alertWindow != null) {
+        alertWindow.close()
+        alertWindow = null
+    }
 }
 
 app.on('ready', () => {
@@ -89,10 +181,12 @@ app.on('ready', () => {
 })
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
+        if (tray) {
+            tray.destroy()
+        }
         app.quit()
     }
 })
-
 app.on('activate', function () {
     if (loginWindow === null && connectWindow === null) {
         createLoginWindow()
@@ -100,43 +194,18 @@ app.on('activate', function () {
 })
 
 exports.login = () => {
-    //Open new window first to prevent suicide
     createLoginWindow()
-    if (connectWindow) {
-        connectWindow.close()
-    }
-    if (alertWindow) {
-        alertWindow.close()
-    }
-    
 }
 
 exports.connect = () => {
-    //Open new window first to prevent suicide
     createConnectWindow()
-    loginWindow.close()
-    updateWindow.close()
-    
-}
-
-exports.connectAlert = () => {
-    createConnectWindow()
-    alertWindow.close()
 }
 
 exports.alert = () => {
-    createAlertWindow()
-    if (connectWindow) {
-        connectWindow.close()
-    }
-    
+    createAlertWindow()    
 }
 exports.update = () => {
-    createUpdateWindow()
-    if (connectWindow) {
-        connectWindow.close()
-    }
-    
+    createUpdateWindow()   
 }
 
 //Squirrel
@@ -144,11 +213,11 @@ exports.update = () => {
 if (handleSquirrelEvent()) {
     // squirrel event handled and app will exit in 1000ms, so don't do anything else
     return;
-  }
+}
   
-  function handleSquirrelEvent() {
+function handleSquirrelEvent() {
     if (process.argv.length === 1) {
-      return false;
+        return false;
     }
   
     const ChildProcess = require('child_process');
@@ -160,17 +229,17 @@ if (handleSquirrelEvent()) {
     const exeName = path.basename(process.execPath);
   
     const spawn = function(command, args) {
-      let spawnedProcess, error;
-  
-      try {
-        spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
-      } catch (error) {}
-  
-      return spawnedProcess;
+        let spawnedProcess, error;
+
+        try {
+            spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
+        } catch (error) {}
+
+        return spawnedProcess;
     };
   
     const spawnUpdate = function(args) {
-      return spawn(updateDotExe, args);
+        return spawn(updateDotExe, args);
     };
   
     const squirrelEvent = process.argv[1];
@@ -208,8 +277,6 @@ if (handleSquirrelEvent()) {
     }
 };
 
-let checkNetwork
-
 ipcMain.on('networkCheck', (event, args) => {
     if (args === 1) {
         checkNetwork = 1
@@ -219,21 +286,94 @@ ipcMain.on('networkCheck', (event, args) => {
     }
 })
 
+ipcMain.on('connection', (event, args) => {
+    if (args === 1) {
+        //Told to connect
+        ovpnConnection('connect')
+    } else if (args === 0) {
+        //Told to disconnect
+        ovpnConnection('disconnect')
+    }
+})
+
 function networkCheck () {
     if (checkNetwork === 1) {
         internetAvailable({
             timeout: 3000,
             retires: 5
         }).then(() => {
-            log.info("Internet connection detected.")
-            setTimeout(() => {networkCheck()})
+            log.verbose("Internet connection detected.")
+            setTimeout(() => {networkCheck()}, 1000)
         }).catch(() => {
             log.info("No internet connection detected.")
             notify.notify({
                 title: 'Viper VPN Alert',
-                message: `We've detected that you've lost connection to the internet. Once you regain connection, you might have to disconnect and reconnect to Viper.`
+                message: `We've detected that you've lost connection to the internet. To prevent any issues getting back online, we've disconnected Viper. Once you're back online, you can reconnect.`,
+                icon: `./icons/icon.ico`
             });
+            exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+                if (error) {
+                    log.error(`Error disconnecting from OpenVPN: ${error}`)
+                    if (connectWindow) {
+                        connectWindow.webContents.send('connectivity', {connection: 0});
+                    }
+                    
+                } else {
+                    log.info(`OpenVPN stdout: ${stdout}`)
+                    log.info(`OpenVPN stderr: ${stderr}`)
+                    if (connectWindow) {
+                        connectWindow.webContents.send('connectivity', {connection: 1});
+                    }
+                }
+            })
         })
     }
 
+}
+
+function ovpnConnection(connect) {
+    let ovpnPath
+    if (os.arch() === "x64") {
+        ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
+        log.info(`OpenVPN directory set to ${ovpnPath}`)
+    } else if (os.arch() === "ia32") {
+        ovpnPath = "C:\\Program Files\\OpenVPN\\bin"
+        log.info(`OpenVPN directory set to ${ovpnPath}`)
+    } else {
+        log.error("Arch check fail")
+    }
+    if (connect === "connect") {
+        log.info(`Starting OpenVPN connection.`)
+        ovpnCurrentConnection = exec(`"${ovpnPath}\\openvpn.exe\" --config current_vpn.ovpn\"`)
+        ovpnCurrentConnection.stdout.on('data', (data) => {
+            log.info(`OpenVPN stdout: ${data}`)
+            if (data.includes('Initialization Sequence Completed')) {
+                log.info(`OpenVPN Connected!`)
+                checkNetwork = 1
+                networkCheck()
+                connectWindow.webContents.send('connection', {connection: 1});
+            }
+        })
+        ovpnCurrentConnection.stderr.on('data', (data) => {
+            log.info(`OpenVPN stderr: ${data}`)
+        })
+        ovpnCurrentConnection.on('close', (data) => {
+            log.info(`OpenVPN closed: ${data}`)
+            connectWindow.webContents.send('connection', {connection: 0});
+            checkNetwork = 0
+            networkCheck()
+        })
+    } else if (connect === "disconnect") {
+        log.info(`Starting OpenVPN disconnection.`)
+        exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+            if (error) {
+                log.error(`Error disconnecting from OpenVPN: ${error}`)
+                connectWindow.webContents.send('connection', {connection: 1});
+            } else {
+                log.info(`OpenVPN stdout: ${stdout}`)
+                log.info(`OpenVPN stderr: ${stderr}`)
+                connectWindow.webContents.send('connection', {connection: 0});
+            }
+        })
+    }
 }
