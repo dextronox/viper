@@ -9,19 +9,19 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack:win32": "electron-packager . Viper --platform=win32 --arch=ia32 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_vpn.ovpn --ignore=settings.json --ignore=ovpninstaller.exe --out dist/",
-    "pack:win64": "electron-packager . Viper --platform=win32 --arch=x64 --executable-name=Viper --win32metadata.FileDescription=Viper --icon=icons/icon.ico --ignore=log.txt --ignore=current_vpn.ovpn --ignore=settings.json --ignore=ovpninstaller.exe --out dist/",
+    "pack:win32": "electron-packager . Viper --platform=win32 --arch=ia32 --executable-name=Viper --win32metadata.FileDescription=\"Viper\" --icon=icons/icon.ico --ignore=log.txt --ignore=current_vpn.ovpn --ignore=settings.json --ignore=ovpninstaller.exe --out dist/",
+    "pack:win64": "electron-packager . Viper --platform=win32 --arch=x64 --executable-name=Viper --win32metadata.FileDescription=\"Viper\" --icon=icons/icon.ico --ignore=log.txt --ignore=current_vpn.ovpn --ignore=settings.json --ignore=ovpninstaller.exe --out dist/",
     "installer:win32": "electron-installer-windows --config dist/config_ia32.json",
     "installer:win64": "electron-installer-windows --config dist/config_x64.json"
   },
   "author": "Viper",
   "license": "MIT License",
   "devDependencies": {
-    "electron": "^2.0.4",
+    "electron": "^2.0.5",
     "electron-winstaller": "^2.6.4"
   },
   "dependencies": {
-    "bootstrap": "^4.1.1",
+    "bootstrap": "^4.1.3",
     "child_process": "^1.0.2",
     "electron-log": "^2.2.16",
     "fs": "0.0.1-security",
