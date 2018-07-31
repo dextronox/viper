@@ -6,8 +6,6 @@ window.Bootstrap = require('bootstrap')
 const ipcRenderer = require('electron').ipcRenderer
 //Non elevated
 const cmd = require('node-cmd')
-//Elevated
-const sudo = require('sudo-prompt');
 const fs = require('fs')
 const request = require('request')
 const log = require('electron-log')
@@ -26,7 +24,7 @@ function environmentCheck() {
         ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
         log.info(`OpenVPN directory set to ${ovpnPath}`)
     } else if (os.arch() === "ia32") {
-        ovpnPath = "C:\\Program Files (x86)\\OpenVPN\\bin"
+        ovpnPath = "C:\\Program Files\\OpenVPN\\bin"
         log.info(`OpenVPN directory set to ${ovpnPath}`)
     } else {
         log.error("Arch check fail")
@@ -155,34 +153,27 @@ function setupDisplay() {
 
 function setupEventListeners () {
     let warning = 0
+    ipcRenderer.on('connectivity', (event, args) => {
+        if (args.connection === 1) {
+            //Network check disconnected VPN
+            setupDisplay()
+        } else if (args.connection === 0) {
+            //Network check failed to disconnected VPN
+            setupDisplay()
+        }
+    })
     $("#connect").click(function() {
         log.info("Connect clicked")
         $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
-        cmd.get('tasklist', (error, data, stderr) => {
-            if (error) {
-                log.error(error)
-                $("#connection").html(`<p>${error}</p>`)
-            } else if (data.includes("openvpn.exe")) {
+        ipcRenderer.send('connection', 1)
+        ipcRenderer.once('connection', (event, args) => {
+            if (args.connection === 1) {
+                //Connected
                 setupDisplay()
-            } else {
-                sudo.exec(`"${ovpnPath}\\openvpn.exe" --config current_vpn.ovpn`, options, (error, stdout, stderr) => {
-                    if (error) {
-                        log.error(error)
-                        if (warning === 0) {
-                            swalAlert(`Error`, "The VPN failed to connect. This is either because you didn't grant permission, or Viper was unable to complete the connection. This error could also have been triggered by you disconnecting within 30 seconds of initially connecting, in which case you can ignore this alert.", "error")
-                            setupDisplay()
-                        }
-                    }
-                    log.info(stdout)
-                })
-                setTimeout(function() {
-                    ipcRenderer.send('networkCheck', 1)
-                    setupDisplay()
-                }, 5000)
-                setTimeout(function() {
-                    warning = 1
-                    log.info("Now assuming connected")
-                }, 45000) 
+            } else if (args.connection === 0) {
+                //Disconnected
+                swalAlert(`Error`, `Viper was unable to connect you to our VPN.`, `error`)
+                setupDisplay()
             }
         })
 
@@ -191,14 +182,16 @@ function setupEventListeners () {
     $("#disconnect").click(function() {
         log.info("Disconnect clicked")
         $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
-        sudo.exec('taskkill /IM openvpn.exe /F', options, (error, stdout, stderr) => {
-            if (error) {
-                log.error(error)
-                swalAlert(`Error`, `An error occurred whilst trying to disconnect. Error: ${error}`, `error`)
+        ipcRenderer.send('connection', 0)
+        ipcRenderer.once('connection', (event, args) => {
+            if (args.connection === 1) {
+                //Connected
+                swalAlert(`Error`, `Viper was unable to disconnect you from our VPN.`, `error`)
+                setupDisplay()
+            } else if (args.connection === 0) {
+                //Disconnected
+                setupDisplay()
             }
-            log.info(stdout)
-            ipcRenderer.send('networkCheck', 0)
-            setupDisplay()
         })
     })
 
