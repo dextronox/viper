@@ -132,17 +132,14 @@ function setupDisplay() {
             $(".viper-header").html(`Hello, ${JSON.parse(data)["current_user"]}`)
         }
     })
-    cmd.get('tasklist', (error, data, stderr) => {
-        if (error) {
-            log.error(error)
-            swalAlert(`Error`, `Unable to check whether OpenVPN is running.`, `error`)
-            $("#connection").append("<p>Viper should be restarted</p>")
-        } else if (data.includes("openvpn.exe")) {//OpenVPN process is running, therefore a VPN must be connected
+    ipcRenderer.send('checkIfConnected')
+    ipcRenderer.once('checkIfConnected', (event, args) => {
+        if (args.connected === true) {
             log.info("OpenVPN is currently connected.")
             $("#connection").html('<button id="disconnect" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Disconnect</button>')
-            $("#connection").append(`<p class="message">It may take a couple seconds to finish connecting. If the VPN doesn't appear to be working, feel free to click disconnect and then reconnect. You may see an error when disconnecting, which can be ignored.</p>`)
+            $("#connection").append(`<p class="message">It may take a couple seconds to finish connecting. If the VPN doesn't appear to be working, feel free to click disconnect and then reconnect.</p>`)
             setupEventListeners()
-        } else { //OpenVPN is not running, therefore a VPN must not be connected
+        } else {
             log.info("OpenVPN is currently disconnected.")
             $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
             setupEventListeners()

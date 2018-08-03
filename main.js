@@ -12,7 +12,7 @@ const fs = require('fs')
 const internetAvailable = require('internet-available')
 const notify = require('node-notifier')
 const os = require('os')
-var windowCloseCheck, loginWindow = null, connectWindow = null, alertWindow = null, updateWindow = null, checkNetwork = null, ovpnCurrentConnection = null, tray = null, contextMenu = null
+var windowCloseCheck, loginWindow, connectWindow, alertWindow, updateWindow, checkNetwork, ovpnCurrentConnection, tray, contextMenu
 
 // Same as for console transport
 log.transports.file.level = 'info';
@@ -66,7 +66,7 @@ function createLoginWindow () {
 function createConnectWindow () {
     windowCloseCheck = null
     //log.info(`Login: ${loginWindow} Connect: ${connectWindow} Alert: ${alertWindow} Update: ${updateWindow} Network Check: ${checkNetwork} OpenVPN Current Connection: ${ovpnCurrentConnection} Tray: ${tray} Context Menu: ${contextMenu}`)
-    connectWindow = new BrowserWindow({width: 800, height: 850, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 850, transparent: false, title: "Viper Connect", resizable: false})
+    connectWindow = new BrowserWindow({width: 830, height: 750, icon: "./icons/icon.png", transparent: false, title: "Viper Connect", resizable: true})
     connectWindow.setMenu(null)
     connectWindow.loadURL(url.format({
         pathname: path.join(__dirname, './views/connect/connect.html'),
@@ -121,7 +121,7 @@ function createAlertWindow () {
     if (tray) {
         tray.destroy()
     }
-    alertWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Alert", resizable: false})
+    alertWindow = new BrowserWindow({width: 800, height: 350, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Alert", resizable: false})
     alertWindow.setMenu(null)
     alertWindow.loadURL(url.format({
         pathname: path.join(__dirname, './views/alert/alert.html'),
@@ -150,7 +150,7 @@ function createUpdateWindow () {
     if (tray) {
         tray.destroy()
     }
-    updateWindow = new BrowserWindow({width: 800, height: 450, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
+    updateWindow = new BrowserWindow({width: 800, height: 350, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
     updateWindow.setMenu(null)
     updateWindow.loadURL(url.format({
         pathname: path.join(__dirname, './views/update/update.html'),
@@ -177,6 +177,15 @@ function createUpdateWindow () {
 }
 
 app.on('ready', () => {
+    exec(`tasklist`, (error, stdout, stderr) => {
+        if (error) {
+            log.error(`Could not check if OpenVPN is running. ${error}`)
+        } else if (stdout.includes('openvpn.exe')) {
+            log.info('openvpn.exe is running. Beginning network check.')
+            checkNetwork = 1
+            networkCheck()
+        }
+    })
     createLoginWindow()
 })
 app.on('window-all-closed', function () {
@@ -277,14 +286,16 @@ function handleSquirrelEvent() {
     }
 };
 
-ipcMain.on('networkCheck', (event, args) => {
-    if (args === 1) {
-        checkNetwork = 1
-        networkCheck()
-    } else if (args === 0) {
-        checkNetwork = 0
-    }
-})
+// ipcMain.on('networkCheck', (event, args) => {
+//     if (args === 1) {
+//         if (checkNetwork = 0) {
+//             checkNetwork = 1
+//             networkCheck()
+//         }
+//     } else if (args === 0) {
+//         checkNetwork = 0
+//     }
+// })
 
 ipcMain.on('connection', (event, args) => {
     if (args === 1) {
@@ -296,11 +307,25 @@ ipcMain.on('connection', (event, args) => {
     }
 })
 
+ipcMain.on('checkIfConnected', (event, args) => {
+    exec(`tasklist`, (error, stdout, stderr) => {
+        if (error) {
+            log.error(`Could not check if OpenVPN is running. ${error}`)
+        } else if (stdout.includes('openvpn.exe')) {
+            log.info('openvpn.exe is running. Returning true.')
+            connectWindow.webContents.send('checkIfConnected', {connected: true});
+        } else {
+            log.info('openvpn.exe is not running. Returning false.')
+            connectWindow.webContents.send('checkIfConnected', {connected: false});
+        }
+    })
+})
+
 function networkCheck () {
     if (checkNetwork === 1) {
         internetAvailable({
-            timeout: 3000,
-            retires: 5
+            timeout: 5000,
+            retires: 10
         }).then(() => {
             log.verbose("Internet connection detected.")
             setTimeout(() => {networkCheck()}, 1000)
@@ -349,8 +374,10 @@ function ovpnConnection(connect) {
             log.info(`OpenVPN stdout: ${data}`)
             if (data.includes('Initialization Sequence Completed')) {
                 log.info(`OpenVPN Connected!`)
-                checkNetwork = 1
-                networkCheck()
+                if (checkNetwork === 0) {
+                    checkNetwork = 1
+                    networkCheck()
+                }
                 connectWindow.webContents.send('connection', {connection: 1});
             }
         })
@@ -372,6 +399,7 @@ function ovpnConnection(connect) {
             } else {
                 log.info(`OpenVPN stdout: ${stdout}`)
                 log.info(`OpenVPN stderr: ${stderr}`)
+                checkNetwork = 0
                 connectWindow.webContents.send('connection', {connection: 0});
             }
         })
