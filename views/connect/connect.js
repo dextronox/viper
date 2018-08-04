@@ -1,6 +1,7 @@
 //Get remote module
 const remote = require('electron').remote
 //Require main process
+const getCurrentWindow = require('electron').remote.getCurrentWindow
 const main = remote.require('./main.js')
 window.Bootstrap = require('bootstrap')
 const ipcRenderer = require('electron').ipcRenderer
@@ -41,12 +42,11 @@ function environmentCheck() {
         log.info(`Newest version: ${parseFloat(body) <= parseFloat(remote.app.getVersion())}`)
         if (err) {
             log.error("Unable to get latest version number.")
-            $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
+            $("#version").html(`${remote.app.getVersion()} (<a href="#" style="color:black" id="logout">Logout</a>)`)
             $("#logout").click(() => {
                 logout()
             })
-        }
-        if (parseFloat(body) > parseFloat(remote.app.getVersion())) {
+        } else if (parseFloat(body) > parseFloat(remote.app.getVersion())) {
             $("#version").append(` (<a href="#" style="color:black" id="update">Update Available</a>)`)
             $("#version").append(` (<a href="#" style="color:black" id="logout">Logout</a>)`)
             $("#update").click(() => {
@@ -141,8 +141,30 @@ function setupDisplay() {
             setupEventListeners()
         } else {
             log.info("OpenVPN is currently disconnected.")
-            $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
-            setupEventListeners()
+            let requestOptions = { 
+                json: {
+                    api_key: 'm780789416-5ec4543d2598ec46a4cff9a4'
+                }
+            }
+            request.post('https://api.uptimerobot.com/v2/getMonitors', requestOptions, (error, httpResponse, body) => {
+                log.info(body)
+                log.info(body["stat"])
+                if (error) {
+                    log.error(`Unable to get uptime data from UptimeRobot. Error: ${error}`)
+                    $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
+                    setupEventListeners()
+                } else if (body["stat"] === "ok") {
+                    log.info('Server is online.')
+                    $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
+                    setupEventListeners()
+                } else if (body["stat"] != "ok") {
+                    log.info('Server is offline.')
+                    $("#connection").html('<button id="refresh" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Refresh</button>')
+                    swalAlert('Viper is Offline', 'Viper is currently offline. This means we are unable to accept connections to our VPN. The issue should be resolved soon.', 'error')
+                    setupEventListeners()
+                }
+            })
+
         }
     })
 }
@@ -158,6 +180,9 @@ function setupEventListeners () {
             //Network check failed to disconnected VPN
             setupDisplay()
         }
+    })
+    $('#refresh').click(() => {
+        getCurrentWindow().reload()
     })
     $("#connect").click(function() {
         log.info("Connect clicked")
@@ -238,13 +263,60 @@ function setupEventListeners () {
 }
 
 function logout() {
-    fs.writeFile('./settings.json', '{}', (err) => {
-        if (err) {
-            swalAlert(`Error`, `There was an error logging out. To ensure stability, Viper will now close. This error was caused by the settings.json file being unwritable.`, `error`)
-            main.app.quit()
+    ipcRenderer.send('checkIfConnected')
+    ipcRenderer.once('checkIfConnected', (event, args) => {
+        if (args.connected === true) {
+            swal({
+                title: "Are you sure?",
+                text: "You're currently connected to Viper. Logging out will disconnect you and all the security benefits of Viper will be lost.",
+                icon: "warning",
+                buttons: {
+                    ignore: {
+                        text: "Stay logged in",
+                        closeModal: true,
+                        className: "swal-button--cancel",
+                        value: null
+                    },
+                    update: {
+                        text: "Continue logging out",
+                        closeModal: false
+                    }
+                }
+            }).then(willLogout => {
+                if (willLogout) {
+                    log.info("User confirmed they want to logout.")
+                    ipcRenderer.send('connection', 0)
+                    ipcRenderer.once('connection', (event, args) => {
+                        if (args.connection === 1) {
+                            //Connected
+                            swalAlert(`Error`, `Whilst logging out we failed to disconnect you from Viper. Viper will continue to logout, however the VPN may remain connected. Realistically, you should never see this error message. If you are reading this, something has gone horribly, horribly wrong. Try killing openvpn.exe with task manager if the VPN remains connected.`, `error`)
+                            main.login()
+                        } else if (args.connection === 0) {
+                            //Disconnected
+                            fs.writeFile('./settings.json', '{}', (err) => {
+                                if (err) {
+                                    swalAlert(`Error`, `There was an error logging out. To ensure stability, Viper will now close. This error was caused by the settings.json file being unwritable.`, `error`)
+                                    main.app.quit()
+                                }
+                                main.login()
+                            })
+                        }
+                    })
+                } else {
+                    log.info("User confirmed they do not want to logout.")
+                }
+            })
+        } else {
+            fs.writeFile('./settings.json', '{}', (err) => {
+                if (err) {
+                    swalAlert(`Error`, `There was an error logging out. To ensure stability, Viper will now close. This error was caused by the settings.json file being unwritable.`, `error`)
+                    main.app.quit()
+                }
+                main.login()
+            })
         }
-        main.login()
     })
+
 }
 
 function swalAlert(title, body, icon) {

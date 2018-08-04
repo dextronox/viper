@@ -14,6 +14,78 @@ const notify = require('node-notifier')
 const os = require('os')
 var windowCloseCheck, loginWindow, connectWindow, alertWindow, updateWindow, checkNetwork, ovpnCurrentConnection, tray, contextMenu
 
+
+//Squirrel
+// this should be placed at top of main.js to handle setup events quickly
+if (handleSquirrelEvent()) {
+    // squirrel event handled and app will exit in 1000ms, so don't do anything else
+    return;
+}
+  
+function handleSquirrelEvent() {
+    if (process.argv.length === 1) {
+        return false;
+    }
+  
+    const ChildProcess = require('child_process');
+    const path = require('path');
+  
+    const appFolder = path.resolve(process.execPath, '..');
+    const rootAtomFolder = path.resolve(appFolder, '..');
+    const updateDotExe = path.resolve(path.join(rootAtomFolder, 'Update.exe'));
+    const exeName = path.basename(process.execPath);
+  
+    const spawn = function(command, args) {
+        let spawnedProcess, error;
+
+        try {
+            spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
+        } catch (error) {}
+
+        return spawnedProcess;
+    };
+  
+    const spawnUpdate = function(args) {
+        return spawn(updateDotExe, args);
+    };
+  
+    const squirrelEvent = process.argv[1];
+    switch (squirrelEvent) {
+      case '--squirrel-install':
+      case '--squirrel-updated':
+        // Optionally do things such as:
+        // - Add your .exe to the PATH
+        // - Write to the registry for things like file associations and
+        //   explorer context menus
+  
+        // Install desktop and start menu shortcuts
+        spawnUpdate(['--createShortcut', exeName]);
+  
+        setTimeout(app.quit, 1000);
+        return true;
+  
+      case '--squirrel-uninstall':
+        // Undo anything you did in the --squirrel-install and
+        // --squirrel-updated handlers
+  
+        // Remove desktop and start menu shortcuts
+        spawnUpdate(['--removeShortcut', exeName]);
+  
+        setTimeout(app.quit, 1000);
+        return true;
+  
+      case '--squirrel-obsolete':
+        // This is called on the outgoing version of your app before
+        // we update to the new version - it's the opposite of
+        // --squirrel-updated
+  
+        app.quit();
+        return true;
+    }
+};
+
+//Squirrel above this point.
+
 // Same as for console transport
 log.transports.file.level = 'info';
 log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
@@ -65,15 +137,14 @@ function createLoginWindow () {
 
 function createConnectWindow () {
     windowCloseCheck = null
-    //log.info(`Login: ${loginWindow} Connect: ${connectWindow} Alert: ${alertWindow} Update: ${updateWindow} Network Check: ${checkNetwork} OpenVPN Current Connection: ${ovpnCurrentConnection} Tray: ${tray} Context Menu: ${contextMenu}`)
-    connectWindow = new BrowserWindow({width: 830, height: 750, icon: "./icons/icon.png", transparent: false, title: "Viper Connect", resizable: true})
+    connectWindow = new BrowserWindow({width: 830, height: 750, icon: "./icons/icon.png", transparent: false, title: "Viper Connect", resizable: false})
     connectWindow.setMenu(null)
     connectWindow.loadURL(url.format({
         pathname: path.join(__dirname, './views/connect/connect.html'),
         protocol: 'file:',
         slashes: true
     }))
-    //connectWindow.webContents.openDevTools()
+    connectWindow.webContents.openDevTools()
     connectWindow.on('minimize',function(event){
         event.preventDefault();
         connectWindow.hide();
@@ -94,7 +165,7 @@ function createConnectWindow () {
         {
             label: 'Quit', click: () => {
                 windowCloseCheck = 1
-                app.quit()
+                ovpnConnection('disconnect', app.quit)
             }
         }
     ])
@@ -193,7 +264,7 @@ app.on('window-all-closed', function () {
         if (tray) {
             tray.destroy()
         }
-        app.quit()
+        ovpnConnection('disconnect', app.quit)
     }
 })
 app.on('activate', function () {
@@ -216,75 +287,6 @@ exports.alert = () => {
 exports.update = () => {
     createUpdateWindow()   
 }
-
-//Squirrel
-// this should be placed at top of main.js to handle setup events quickly
-if (handleSquirrelEvent()) {
-    // squirrel event handled and app will exit in 1000ms, so don't do anything else
-    return;
-}
-  
-function handleSquirrelEvent() {
-    if (process.argv.length === 1) {
-        return false;
-    }
-  
-    const ChildProcess = require('child_process');
-    const path = require('path');
-  
-    const appFolder = path.resolve(process.execPath, '..');
-    const rootAtomFolder = path.resolve(appFolder, '..');
-    const updateDotExe = path.resolve(path.join(rootAtomFolder, 'Update.exe'));
-    const exeName = path.basename(process.execPath);
-  
-    const spawn = function(command, args) {
-        let spawnedProcess, error;
-
-        try {
-            spawnedProcess = ChildProcess.spawn(command, args, {detached: true});
-        } catch (error) {}
-
-        return spawnedProcess;
-    };
-  
-    const spawnUpdate = function(args) {
-        return spawn(updateDotExe, args);
-    };
-  
-    const squirrelEvent = process.argv[1];
-    switch (squirrelEvent) {
-      case '--squirrel-install':
-      case '--squirrel-updated':
-        // Optionally do things such as:
-        // - Add your .exe to the PATH
-        // - Write to the registry for things like file associations and
-        //   explorer context menus
-  
-        // Install desktop and start menu shortcuts
-        spawnUpdate(['--createShortcut', exeName]);
-  
-        setTimeout(app.quit, 1000);
-        return true;
-  
-      case '--squirrel-uninstall':
-        // Undo anything you did in the --squirrel-install and
-        // --squirrel-updated handlers
-  
-        // Remove desktop and start menu shortcuts
-        spawnUpdate(['--removeShortcut', exeName]);
-  
-        setTimeout(app.quit, 1000);
-        return true;
-  
-      case '--squirrel-obsolete':
-        // This is called on the outgoing version of your app before
-        // we update to the new version - it's the opposite of
-        // --squirrel-updated
-  
-        app.quit();
-        return true;
-    }
-};
 
 // ipcMain.on('networkCheck', (event, args) => {
 //     if (args === 1) {
@@ -356,7 +358,7 @@ function networkCheck () {
 
 }
 
-function ovpnConnection(connect) {
+function ovpnConnection(connect, callback) {
     let ovpnPath
     if (os.arch() === "x64") {
         ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
@@ -378,7 +380,12 @@ function ovpnConnection(connect) {
                     checkNetwork = 1
                     networkCheck()
                 }
-                connectWindow.webContents.send('connection', {connection: 1});
+                if (connectWindow) {
+                    connectWindow.webContents.send('connection', {connection: 1});
+                }
+                if (callback) {
+                    callback()
+                }
             }
         })
         ovpnCurrentConnection.stderr.on('data', (data) => {
@@ -386,21 +393,42 @@ function ovpnConnection(connect) {
         })
         ovpnCurrentConnection.on('close', (data) => {
             log.info(`OpenVPN closed: ${data}`)
-            connectWindow.webContents.send('connection', {connection: 0});
+            if (connectWindow) {
+                connectWindow.webContents.send('connection', {connection: 0});
+            }
             checkNetwork = 0
             networkCheck()
         })
     } else if (connect === "disconnect") {
         log.info(`Starting OpenVPN disconnection.`)
         exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
-            if (error) {
+            let errorConverted = error + ""
+            if (errorConverted.indexOf(`The process "openvpn.exe" not found.`) != -1) {
+                //Error was reported because the VPN was connected to begin with. This is a safe error.
+                log.info(`OpenVPN stdout: ${stdout}`)
+                log.info(`OpenVPN stderr: ${stderr}`)
+                checkNetwork = 0
+                if (connectWindow) {
+                    connectWindow.webContents.send('connection', {connection: 0});
+                }     
+                if (callback) {
+                    callback()
+                }
+            } else if (error) {
                 log.error(`Error disconnecting from OpenVPN: ${error}`)
-                connectWindow.webContents.send('connection', {connection: 1});
+                if (connectWindow) {
+                    connectWindow.webContents.send('connection', {connection: 0});
+                }
             } else {
                 log.info(`OpenVPN stdout: ${stdout}`)
                 log.info(`OpenVPN stderr: ${stderr}`)
                 checkNetwork = 0
-                connectWindow.webContents.send('connection', {connection: 0});
+                if (connectWindow) {
+                    connectWindow.webContents.send('connection', {connection: 0});
+                }
+                if (callback) {
+                    callback()
+                }
             }
         })
     }

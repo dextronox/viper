@@ -58,7 +58,6 @@ function setupPage() {
                 setupPage()
             }
         }).pipe(fs.createWriteStream(`current_vpn.ovpn`).on("finish", () => {
-            log.info(requestResponse)
             let settings = {
                 "current_user": username.charAt(0).toUpperCase() + username.slice(1),
                 "current_login": `Basic ${btoa(username + ":" + password)}`
@@ -73,6 +72,15 @@ function setupPage() {
                 })
             }
         }))
+    })
+    $(document).ready(() => {
+        $('input').keypress(function (e) {
+            if (e.which == 13) {
+                log.info('Enter key clicked. Triggering form submit.')
+                $('#submit').trigger('click')
+                return false;
+            }
+        });
     })
 }
 
