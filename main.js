@@ -12,7 +12,7 @@ const fs = require('fs')
 const internetAvailable = require('internet-available')
 const notify = require('node-notifier')
 const os = require('os')
-var windowCloseCheck, loginWindow, connectWindow, alertWindow, updateWindow, checkNetwork, ovpnCurrentConnection, tray, contextMenu
+var windowCloseCheck = null, loginWindow = null, connectWindow = null, alertWindow = null, updateWindow = null, checkNetwork = null, ovpnCurrentConnection = null, tray = null, contextMenu = null, adminWindow = null
 
 
 //Squirrel
@@ -109,10 +109,10 @@ function createLoginWindow () {
     if (tray) {
         tray.destroy()
     }
-    loginWindow = new BrowserWindow({width: 800, height: 600, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 600, transparent: false, title: "Viper Login", resizable: false})
+    loginWindow = new BrowserWindow({width: 800, height: 600, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 600, transparent: false, title: "Viper Login", resizable: false})
     loginWindow.setMenu(null)
     loginWindow.loadURL(url.format({
-        pathname: path.join(__dirname, './views/login/login.html'),
+        pathname: path.join(__dirname, 'views/login/login.html'),
         protocol: 'file:',
         slashes: true
     }))
@@ -137,14 +137,14 @@ function createLoginWindow () {
 
 function createConnectWindow () {
     windowCloseCheck = null
-    connectWindow = new BrowserWindow({width: 830, height: 750, icon: "./icons/icon.png", transparent: false, title: "Viper Connect", resizable: false})
+    connectWindow = new BrowserWindow({width: 830, height: 750, icon: path.resolve(__dirname, 'icons', 'icon.ico'), transparent: false, title: "Viper Connect", resizable: false})
     connectWindow.setMenu(null)
     connectWindow.loadURL(url.format({
-        pathname: path.join(__dirname, './views/connect/connect.html'),
+        pathname: path.join(__dirname, 'views/connect/connect.html'),
         protocol: 'file:',
         slashes: true
     }))
-    connectWindow.webContents.openDevTools()
+    //connectWindow.webContents.openDevTools()
     connectWindow.on('minimize',function(event){
         event.preventDefault();
         connectWindow.hide();
@@ -155,7 +155,7 @@ function createConnectWindow () {
             connectWindow.hide()
         }
     })
-    tray = new Tray('./icons/icon.ico')
+    tray = new Tray(path.resolve(__dirname, 'icons', 'icon.ico'))
     contextMenu = Menu.buildFromTemplate([
         {
             label: 'Show Viper', click: () => {
@@ -192,10 +192,10 @@ function createAlertWindow () {
     if (tray) {
         tray.destroy()
     }
-    alertWindow = new BrowserWindow({width: 800, height: 350, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Alert", resizable: false})
+    alertWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Alert", resizable: false})
     alertWindow.setMenu(null)
     alertWindow.loadURL(url.format({
-        pathname: path.join(__dirname, './views/alert/alert.html'),
+        pathname: path.join(__dirname, 'views/alert/alert.html'),
         protocol: 'file:',
         slashes: true
     }))
@@ -221,10 +221,10 @@ function createUpdateWindow () {
     if (tray) {
         tray.destroy()
     }
-    updateWindow = new BrowserWindow({width: 800, height: 350, icon: "./icons/icon.png", 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
+    updateWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
     updateWindow.setMenu(null)
     updateWindow.loadURL(url.format({
-        pathname: path.join(__dirname, './views/update/update.html'),
+        pathname: path.join(__dirname, 'views/update/update.html'),
         protocol: 'file:',
         slashes: true
     }))
@@ -244,6 +244,39 @@ function createUpdateWindow () {
     if (alertWindow != null) {
         alertWindow.close()
         alertWindow = null
+    }
+}
+function createAdminWindow () {
+    if (tray) {
+        tray.destroy()
+    }
+    adminWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
+    adminWindow.setMenu(null)
+    adminWindow.loadURL(url.format({
+        pathname: path.join(__dirname, 'views/admin/admin.html'),
+        protocol: 'file:',
+        slashes: true
+    }))
+    //adminWindow.webContents.openDevTools()
+    adminWindow.on('closed', function () {
+        adminWindow = null
+    })
+    if (connectWindow != null) {
+        windowCloseCheck = 1
+        connectWindow.close()
+        connectWindow = null
+    }
+    if (loginWindow != null) {
+        loginWindow.close()
+        loginWindow = null
+    }
+    if (alertWindow != null) {
+        alertWindow.close()
+        alertWindow = null
+    }
+    if (connectWindow != null) {
+        connectWindow.close()
+        connectWindow = null
     }
 }
 
@@ -284,8 +317,13 @@ exports.connect = () => {
 exports.alert = () => {
     createAlertWindow()    
 }
+
 exports.update = () => {
     createUpdateWindow()   
+}
+
+exports.admin = () => {
+    createAdminWindow()
 }
 
 // ipcMain.on('networkCheck', (event, args) => {
@@ -336,7 +374,7 @@ function networkCheck () {
             notify.notify({
                 title: 'Viper VPN Alert',
                 message: `We've detected that you've lost connection to the internet. To prevent any issues getting back online, we've disconnected Viper. Once you're back online, you can reconnect.`,
-                icon: `./icons/icon.ico`
+                icon: path.resolve(__dirname, 'icons', 'icon.ico')
             });
             exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
                 if (error) {

@@ -27,6 +27,7 @@
     "fs": "0.0.1-security",
     "gulp": "^3.9.1",
     "internet-available": "^1.0.0",
+    "is-admin": "^2.1.1",
     "jquery": "^3.3.1",
     "node-cmd": "^3.0.0",
     "node-notifier": "^5.2.1",

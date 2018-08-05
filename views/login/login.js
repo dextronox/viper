@@ -1,7 +1,8 @@
+const path = require('path')
 //Get remote module
 const remote = require('electron').remote
 //Require main process
-const main = remote.require('./main.js')
+const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
 //Load jquery module
 const request = require('request')
 const fs = require('fs')
@@ -12,12 +13,12 @@ const swal = require("sweetalert")
 setupPage()
 
 function setupPage() {
-    fs.readFile('./settings.json', 'utf8', (err, data) => {
+    fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), 'utf8', (err, data) => {
         if (err) {
             //If file doesn't exist, this is a first launch.
             log.info("Could not read settings file. Perhaps it doesn't exist?")
             //Create settings file.
-            fs.writeFile("./settings.json", '{}', function (err) {
+            fs.writeFile(path.resolve(__dirname, '../..', 'settings.json'), '{}', function (err) {
                 if (err) {
                     swalAlert(`Error`, `Unable to create settings file. \r\nDetails of the error - ${err}`, `error`)
                 } else {
@@ -53,17 +54,17 @@ function setupPage() {
             if (response.statusCode === 200) {
                 requestResponse = response
             } else {
-                swalAlert(`Error`, `Error downloading configuation file. This is more likely because your username and/or password was incorrect.\r\nDetails of the error - Response Code: ${response.statusCode}, Response Message: ${response.statusMessage}`, `error`)
+                swalAlert(`Error`, `Error downloading configuation file. This is most likely because your username and/or password was incorrect.\r\nDetails of the error - Response Code: ${response.statusCode}, Response Message: ${response.statusMessage}`, `error`)
                 $("#submitDiv").html(`<p class="submit" id="submit">Login</p>`)
                 setupPage()
             }
-        }).pipe(fs.createWriteStream(`current_vpn.ovpn`).on("finish", () => {
+        }).pipe(fs.createWriteStream(path.resolve(__dirname, '../..', 'current_vpn.ovpn')).on("finish", () => {
             let settings = {
                 "current_user": username.charAt(0).toUpperCase() + username.slice(1),
                 "current_login": `Basic ${btoa(username + ":" + password)}`
             }
             if (requestResponse.statusCode === 200) {
-                fs.writeFile("./settings.json", JSON.stringify(settings), function (err) {
+                fs.writeFile(path.resolve(__dirname, '../..', 'settings.json'), JSON.stringify(settings), function (err) {
                     if (err) {
                         swalAlert(`Error`, `Unable to write current user and login information to disk. \r\nDetails of the error - ${err}`, `error`)
                     } else {

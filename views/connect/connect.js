@@ -1,8 +1,9 @@
+const path = require('path')
 //Get remote module
 const remote = require('electron').remote
 //Require main process
 const getCurrentWindow = require('electron').remote.getCurrentWindow
-const main = remote.require('./main.js')
+const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
 window.Bootstrap = require('bootstrap')
 const ipcRenderer = require('electron').ipcRenderer
 //Non elevated
@@ -16,11 +17,17 @@ var options = {
     name: 'Viper'
 }
 const swal = require("sweetalert")
+const isAdmin = require('is-admin')
 let ovpnPath
 
 environmentCheck()
 
 function environmentCheck() {
+    isAdmin().then((admin) => {
+        if (!admin) {
+            main.admin()
+        }
+    })
     if (os.arch() === "x64") {
         ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
         log.info(`OpenVPN directory set to ${ovpnPath}`)
@@ -89,7 +96,7 @@ function environmentCheck() {
         }
     })
     //Check VPN file exists
-    fs.readFile('./current_vpn.ovpn', 'utf8', (err) => {
+    fs.readFile(path.resolve(__dirname, '../..', 'current_vpn.ovpn'), 'utf8', (err) => {
         if (err) {
             swalAlert(`Error`, 'Could not read VPN configuration file. Application will now logout.', 'error')
             log.error(`current_vpn.ovpn not found. Error: ${err}`)
@@ -97,7 +104,7 @@ function environmentCheck() {
         }
     })
 
-    fs.readFile('./settings.json', 'utf8', (err, data) => {
+    fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), 'utf8', (err, data) => {
         if (err) {
             swalAlert(`Error`, `Could not read settings file. Error: ${err}`, `error`)
         } else {
@@ -106,7 +113,7 @@ function environmentCheck() {
                 log.error(`current_user or current_login is not defined.`)
                 logout()
             } else {
-                log.info("Environment check complete.")
+                log.info("Settings check complete.")
             }
         }
 
@@ -124,7 +131,7 @@ function environmentCheck() {
 }
 
 function setupDisplay() {
-    fs.readFile('./settings.json', function read(err, data) {
+    fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), function read(err, data) {
         if (err) {
             log.error(error)
             $(".viper-header").html(`Hello.`)
@@ -147,8 +154,7 @@ function setupDisplay() {
                 }
             }
             request.post('https://api.uptimerobot.com/v2/getMonitors', requestOptions, (error, httpResponse, body) => {
-                log.info(body)
-                log.info(body["stat"])
+                log.info(`Server status from UptimeRobot: ${body["stat"]}`)
                 if (error) {
                     log.error(`Unable to get uptime data from UptimeRobot. Error: ${error}`)
                     $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
@@ -222,7 +228,7 @@ function setupEventListeners () {
         log.info("Viper for Mobile submit clicked")
         log.info($("#vipermobileemail").val())
         $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
-        fs.readFile('./settings.json', "utf8", function read(err, data) {
+        fs.readFile(path.resolve(__dirname, 'settings.json'), "utf8", function read(err, data) {
             if (err) {
                 //Unable to read settings file
             } else {
@@ -293,7 +299,7 @@ function logout() {
                             main.login()
                         } else if (args.connection === 0) {
                             //Disconnected
-                            fs.writeFile('./settings.json', '{}', (err) => {
+                            fs.writeFile(path.resolve(__dirname, '../..', 'settings.json'), '{}', (err) => {
                                 if (err) {
                                     swalAlert(`Error`, `There was an error logging out. To ensure stability, Viper will now close. This error was caused by the settings.json file being unwritable.`, `error`)
                                     main.app.quit()
@@ -307,7 +313,7 @@ function logout() {
                 }
             })
         } else {
-            fs.writeFile('./settings.json', '{}', (err) => {
+            fs.writeFile(path.resolve(__dirname, '../..', 'settings.json'), '{}', (err) => {
                 if (err) {
                     swalAlert(`Error`, `There was an error logging out. To ensure stability, Viper will now close. This error was caused by the settings.json file being unwritable.`, `error`)
                     main.app.quit()

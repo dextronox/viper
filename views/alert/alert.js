@@ -1,8 +1,9 @@
+const path = require('path')
 window.Bootstrap = require('bootstrap')
 //Get remote module
 const remote = require('electron').remote
 //Require main process
-const main = remote.require('./main.js')
+const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
 //Non elevated
 const cmd = require('node-cmd')
 //Elevated
@@ -15,7 +16,7 @@ const os = require('os')
 const swal = require("sweetalert")
 //Update
 const exec = require('child_process').execFile;
-var executablePath = "./ovpninstall.exe";
+var executablePath = path.resolve(__dirname, '../..', "ovpninstall.exe");
 var $ = jQuery = require('jquery');
 var sudoOptions = {
     name: "Viper"
@@ -24,7 +25,7 @@ var sudoOptions = {
 setupDisplay()
 
 function setupDisplay() {
-    fs.unlink("./ovpninstaller.exe", (err) => {
+    fs.unlink(path.resolve(__dirname, '../..', 'ovpninstaller.exe'), (err) => {
         if (err) {
             log.error("Unable to delete ovpninstaller.exe. This is probably good.")
         } else {
@@ -59,7 +60,7 @@ function downloadUpdate() {
     }).on('end', () => {
         $("#run").css("display", "block")
         $("#download").css("display", "none")
-    }).pipe(fs.createWriteStream('./ovpninstaller.exe'))
+    }).pipe(fs.createWriteStream(path.resolve(__dirname, '../..', 'ovpninstaller.exe')))
 }
 
 function runUpdate() {
