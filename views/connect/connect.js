@@ -48,7 +48,7 @@ function environmentCheck() {
         log.info(`Remote version for comparison: ${parseFloat(body)}`)
         log.info(`Newest version: ${parseFloat(body) <= parseFloat(remote.app.getVersion())}`)
         if (err) {
-            log.error("Unable to get latest version number.")
+            log.error(`Unable to get latest version number. Error: ${err}`)
             $("#version").html(`${remote.app.getVersion()} (<a href="#" style="color:black" id="logout">Logout</a>)`)
             $("#logout").click(() => {
                 logout()
@@ -130,7 +130,7 @@ function environmentCheck() {
     })
 }
 
-function setupDisplay() {
+function setupDisplay(internet) {
     fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), function read(err, data) {
         if (err) {
             log.error(error)
@@ -149,25 +149,49 @@ function setupDisplay() {
         } else {
             log.info("OpenVPN is currently disconnected.")
             let requestOptions = { 
-                json: {
-                    api_key: 'm780789416-5ec4543d2598ec46a4cff9a4'
-                }
-            }
-            request.post('https://api.uptimerobot.com/v2/getMonitors', requestOptions, (error, httpResponse, body) => {
-                log.info(`Server status from UptimeRobot: ${body["stat"]}`)
+                method: 'POST',
+                url: 'https://api.uptimerobot.com/v2/getMonitors',
+                headers: { 
+                    'cache-control': 'no-cache',
+                    'content-type': 'application/x-www-form-urlencoded' 
+                },
+                form: { 
+                    api_key: 'm780789416-5ec4543d2598ec46a4cff9a4', 
+                    format: 'json', 
+                    logs: '1' 
+                },
+                timeout: 3000
+            };
+            request(requestOptions, (error, httpResponse, body) => {
+                let bodyParse
                 if (error) {
-                    log.error(`Unable to get uptime data from UptimeRobot. Error: ${error}`)
-                    $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
-                    setupEventListeners()
-                } else if (body["stat"] === "ok") {
-                    log.info('Server is online.')
-                    $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
-                    setupEventListeners()
-                } else if (body["stat"] != "ok") {
-                    log.info('Server is offline.')
-                    $("#connection").html('<button id="refresh" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Refresh</button>')
-                    swalAlert('Viper is Offline', 'Viper is currently offline. This means we are unable to accept connections to our VPN. The issue should be resolved soon.', 'error')
-                    setupEventListeners()
+                    if (error.code === "ETIMEDOUT") {
+                        log.error(`Unable to get uptime data from UptimeRobot because of a timeout. Error: ${error}`)
+                        $("#connection").html('<button id="refresh" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Refresh</button>')
+                        swalAlert('You are Offline', 'You are currently disconnected from the internet. Please connect to the internet before connecting to Viper.', 'error')
+                        setupEventListeners()
+                    } else {
+                        log.error(`An unknown error occurred whilst trying to get data from UptimeRobot. Error: ${error}`)
+                        $("#connection").html('<button id="refresh" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Refresh</button>')
+                        swalAlert('An Error Occurred', 'We were unable to determine whether Viper is online. This error has been logged.', 'error')
+                        setupEventListeners()
+                    }
+                } else {
+                    if (body) {
+                        bodyParse = JSON.parse(body)
+                        log.info(`Server status from UptimeRobot: ${bodyParse["monitors"][0]["status"]}`)
+                        log.verbose(bodyParse)
+                    }
+                    if (bodyParse["monitors"][0]["status"] === 2) {
+                        log.info('Server is online.')
+                        $("#connection").html('<button id="connect" type="button" class="btn btn-success btn-lg btn-block connectdisconnect">Connect</button>')
+                        setupEventListeners()
+                    } else if (bodyParse["monitors"][0]["status"] != 2) {
+                        log.info('Server is offline.')
+                        $("#connection").html('<button id="refresh" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Refresh</button>')
+                        swalAlert('Viper is Offline', 'Viper is currently offline. This means we are unable to accept connections to our VPN. The issue should be resolved soon.', 'error')
+                        setupEventListeners()
+                    }
                 }
             })
 
@@ -178,12 +202,21 @@ function setupDisplay() {
 
 function setupEventListeners () {
     let warning = 0
-    ipcRenderer.on('connectivity', (event, args) => {
+    ipcRenderer.on('networkCheckDisconnect', (event, args) => {
         if (args.connection === 1) {
             //Network check disconnected VPN
             setupDisplay()
         } else if (args.connection === 0) {
             //Network check failed to disconnected VPN
+            setupDisplay()
+        }
+    })
+    ipcRenderer.on('connectionLost', (event, args) => {
+        if (args.connection === 1) {
+            //Should never be called
+            setupDisplay()
+        } else if (args.connection === 0) {
+            //Refreshes display
             setupDisplay()
         }
     })
@@ -201,7 +234,9 @@ function setupEventListeners () {
             } else if (args.connection === 0) {
                 //Disconnected
                 swalAlert(`Error`, `Viper was unable to connect you to our VPN.`, `error`)
-                setupDisplay()
+                setTimeout(() => {
+                    setupDisplay()
+                }, 100)
             }
         })
 
@@ -224,47 +259,57 @@ function setupEventListeners () {
     })
 
     $("#vipermobilesubmit").click(function() {
-        let settings_data, current_email_data = $("#vipermobileemail").val()
-        log.info("Viper for Mobile submit clicked")
-        log.info($("#vipermobileemail").val())
-        $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
-        fs.readFile(path.resolve(__dirname, 'settings.json'), "utf8", function read(err, data) {
-            if (err) {
-                //Unable to read settings file
-            } else {
-                settings_data = JSON.parse(data)
-                log.info(data)
-                current_login_data = data
-                let requestConfig = {
-                    url: 'https://viper.dextronox.com/api/mobile',
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    json: {
-                        "Name":settings_data["current_user"],
-                        "Login":settings_data["current_login"],
-                        "Email":current_email_data
+        if ($("#vipermobileemail").val() != "") {
+            let settings_data, current_email_data = $("#vipermobileemail").val()
+            log.info("Viper for Mobile submit clicked")
+            log.info($("#vipermobileemail").val())
+            $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
+            fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), "utf8", function read(err, data) {
+                if (err) {
+                    //Unable to read settings file
+                } else {
+                    settings_data = JSON.parse(data)
+                    log.info(data)
+                    current_login_data = data
+                    let requestConfig = {
+                        url: 'https://viper.dextronox.com/api/mobile',
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        json: {
+                            "Name":settings_data["current_user"],
+                            "Login":settings_data["current_login"],
+                            "Email":current_email_data
+                        }
                     }
+                    request(requestConfig, (err, response, body) => {
+                        if (response.statusCode === 200) {
+                            $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
+                            setTimeout(() => {
+                                $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                                setupEventListeners()
+                            }, 3000)
+                        } else {
+                            //Email failed to send
+                            $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
+                            setTimeout(() => {
+                                $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                                setupEventListeners()
+                            }, 3000)
+                        }
+                    })
                 }
-                request(requestConfig, (err, response, body) => {
-                    if (response.statusCode === 200) {
-                        $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
-                        setTimeout(() => {
-                            $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
-                            setupEventListeners()
-                        }, 3000)
-                    } else {
-                        //Email failed to send
-                        $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
-                        setTimeout(() => {
-                            $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
-                            setupEventListeners()
-                        }, 3000)
-                    }
-                })
-            }
-        })
+            })
+        } else  {
+            swalAlert('Error', 'Please supply an email address.', 'error')
+            $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
+            setTimeout(() => {
+                $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                setupEventListeners()
+            }, 3000)
+        }
+
     })
 }
 
