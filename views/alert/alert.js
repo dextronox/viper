@@ -16,7 +16,7 @@ const os = require('os')
 const swal = require("sweetalert")
 //Update
 const exec = require('child_process').execFile;
-var executablePath = path.resolve(__dirname, '../..', "ovpninstall.exe");
+var executablePath = path.resolve(__dirname, '../..', "ovpninstaller.exe");
 var $ = jQuery = require('jquery');
 var sudoOptions = {
     name: "Viper"
@@ -66,7 +66,7 @@ function downloadUpdate() {
 function runUpdate() {
     log.info("Beginning update.")
     let close = 0
-    sudo.exec('start ovpninstaller.exe', sudoOptions, (err, stdout, stderr) => {
+    sudo.exec(`start ${executablePath}`, sudoOptions, (err, stdout, stderr) => {
         if (err) {
             log.error(`Could not run update.exe. Error: ${err}`)
             swalAlert(`Error`, `Could not complete the installation. ${err}`, `error`)
