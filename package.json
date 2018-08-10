@@ -4,7 +4,7 @@
     "type": "git",
     "url": "https://github.com/dextronox/viper.git"
   },
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Viper VPN Application",
   "main": "main.js",
   "scripts": {
@@ -15,9 +15,9 @@
     "installer:win64": "electron-installer-windows --config dist/config_x64.json"
   },
   "author": "Viper",
-  "license": "MIT License",
+  "license": "MIT",
   "devDependencies": {
-    "electron": "^2.0.5",
+    "electron": "^2.0.6",
     "electron-winstaller": "^2.6.4"
   },
   "dependencies": {
@@ -32,7 +32,7 @@
     "node-cmd": "^3.0.0",
     "node-notifier": "^5.2.1",
     "os": "^0.1.1",
-    "popper.js": "^1.14.3",
+    "popper.js": "^1.14.4",
     "request": "^2.87.0",
     "request-progress": "^3.0.0",
     "shell": "^0.5.0",
