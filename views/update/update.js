@@ -1,13 +1,10 @@
 window.Bootstrap = require('bootstrap')
+const path = require('path')
 //Get remote module
 const remote = require('electron').remote
 //Require main process
 const main = remote.require(path.resolve(__dirname, '../..', 'main.js'))
 //Non elevated
-const path = require('path')
-const cmd = require('node-cmd')
-//Elevated
-const sudo = require('sudo-prompt');
 const fs = require('fs')
 const request = require('request')
 const progress = require('request-progress');
