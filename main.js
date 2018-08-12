@@ -12,6 +12,7 @@ const fs = require('fs')
 const internetAvailable = require('internet-available')
 const notify = require('node-notifier')
 const os = require('os')
+const globalShortcut = electron.globalShortcut
 var windowCloseCheck = null, loginWindow = null, connectWindow = null, alertWindow = null, updateWindow = null, checkNetwork = null, ovpnCurrentConnection = null, tray = null, contextMenu = null, adminWindow = null
 
 
@@ -342,6 +343,7 @@ exports.admin = () => {
 ipcMain.on('connection', (event, args) => {
     if (args === 1) {
         //Told to connect
+        log.info('Received command to connect!')
         ovpnConnection('connect')
     } else if (args === 0) {
         //Told to disconnect
@@ -399,9 +401,17 @@ function ovpnConnection(connect, callback) {
                     callback()
                 }
             }
-        })
-        ovpnCurrentConnection.stdout.on('data', (data) => {
-            log.info(`OpenVPN stdout: ${data}`)
+            if (data.includes('SIGUSR1[connection failed(soft),init_instance]')) {
+                log.info(`OpenVPN failed to connect.`)
+                checkNetwork = 0
+                if (connectWindow) {
+                    connectWindow.reload()
+                }
+                if (callback) {
+                    callback()
+                }
+                ovpnConnection("disconnect")
+            }
             if (data.includes('Closing TUN/TAP interface')) {
                 log.info(`OpenVPN has disconnected on its own.`)
                 checkNetwork = 0
@@ -413,23 +423,9 @@ function ovpnConnection(connect, callback) {
                 }
                 notify.notify({
                     title: 'Viper VPN Alert',
-                    message: `Viper has unexpectedly disconnected. This is most likely because your computer went to sleep, or our server went offline.`,
+                    message: `Viper has unexpectedly disconnected. We will now try to reconnect you.`,
                     icon: path.resolve(__dirname, 'icons', 'icon.ico')
                 });
-            }
-        })
-        ovpnCurrentConnection.stdout.on('data', (data) => {
-            log.info(`OpenVPN stdout: ${data}`)
-            if (data.includes('SIGUSR1[connection failed(soft),init_instance]')) {
-                log.info(`OpenVPN failed to connect.`)
-                checkNetwork = 0
-                if (connectWindow) {
-                    connectWindow.webContents.send('connection', {connection: 0});
-                }
-                if (callback) {
-                    callback()
-                }
-                ovpnConnection("disconnect")
             }
         })
         ovpnCurrentConnection.stderr.on('data', (data) => {
