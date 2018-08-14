@@ -160,7 +160,7 @@ function setupDisplay(internet) {
                     format: 'json', 
                     logs: '1' 
                 },
-                timeout: 3000
+                timeout: 5000
             };
             request(requestOptions, (error, httpResponse, body) => {
                 let bodyParse
