@@ -20,9 +20,33 @@ const swal = require("sweetalert")
 const isAdmin = require('is-admin')
 let ovpnPath
 
-environmentCheck()
+environmentSetup()
 
-function environmentCheck() {
+function environmentSetup() {
+    ipcRenderer.on('networkCheckDisconnect', (event, args) => {
+        if (args.connection === 1) {
+            //Network check disconnected VPN
+            setupDisplay()
+        } else if (args.connection === 0) {
+            //Network check failed to disconnected VPN
+            setupDisplay()
+        }
+    })
+    ipcRenderer.on('connectionLost', (event, args) => {
+        if (args.connection === 1) {
+            //Should never be called
+            setupDisplay()
+        } else if (args.connection === 0) {
+            //Refreshes display
+            setupDisplay()
+        }
+    })
+    $("#vipermobilesubmit").click(() => {
+        mobileSubmit()
+    })
+    $("#viper-logo").click(() => {
+        getCurrentWindow().reload()
+    })
     isAdmin().then((admin) => {
         if (!admin) {
             main.admin()
@@ -130,7 +154,7 @@ function environmentCheck() {
     })
 }
 
-function setupDisplay(internet) {
+function setupDisplay() {
     fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), function read(err, data) {
         if (err) {
             log.error(error)
@@ -160,7 +184,7 @@ function setupDisplay(internet) {
                     format: 'json', 
                     logs: '1' 
                 },
-                timeout: 5000
+                timeout: 7000
             };
             request(requestOptions, (error, httpResponse, body) => {
                 let bodyParse
@@ -180,7 +204,6 @@ function setupDisplay(internet) {
                     if (body) {
                         bodyParse = JSON.parse(body)
                         log.info(`Server status from UptimeRobot: ${bodyParse["monitors"][0]["status"]}`)
-                        log.verbose(bodyParse)
                     }
                     if (bodyParse["monitors"][0]["status"] === 2) {
                         log.info('Server is online.')
@@ -201,25 +224,7 @@ function setupDisplay(internet) {
 
 
 function setupEventListeners () {
-    let warning = 0
-    ipcRenderer.on('networkCheckDisconnect', (event, args) => {
-        if (args.connection === 1) {
-            //Network check disconnected VPN
-            setupDisplay()
-        } else if (args.connection === 0) {
-            //Network check failed to disconnected VPN
-            setupDisplay()
-        }
-    })
-    ipcRenderer.on('connectionLost', (event, args) => {
-        if (args.connection === 1) {
-            //Should never be called
-            setupDisplay()
-        } else if (args.connection === 0) {
-            //Refreshes display
-            setupDisplay()
-        }
-    })
+    //Runs everytime.
     $('#refresh').click(() => {
         getCurrentWindow().reload()
     })
@@ -237,11 +242,16 @@ function setupEventListeners () {
                 setTimeout(() => {
                     setupDisplay()
                 }, 100)
+            } else if (args.connection === 2) {
+                //Another VPN is connected
+                swalAlert(`Error`, `Viper was unable to connect you to our VPN because there is another VPN program open. Ensure all other VPNs are closed, and then try to connect.`, `error`)
+                setTimeout(() => {
+                    setupDisplay()
+                }, 100)
             }
         })
 
     })
-    
     $("#disconnect").click(function() {
         log.info("Disconnect clicked")
         $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
@@ -256,60 +266,6 @@ function setupEventListeners () {
                 setupDisplay()
             }
         })
-    })
-
-    $("#vipermobilesubmit").click(function() {
-        if ($("#vipermobileemail").val() != "") {
-            let settings_data, current_email_data = $("#vipermobileemail").val()
-            log.info("Viper for Mobile submit clicked")
-            log.info($("#vipermobileemail").val())
-            $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
-            fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), "utf8", function read(err, data) {
-                if (err) {
-                    //Unable to read settings file
-                } else {
-                    settings_data = JSON.parse(data)
-                    log.info(data)
-                    current_login_data = data
-                    let requestConfig = {
-                        url: 'https://viper.dextronox.com/api/mobile',
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        json: {
-                            "Name":settings_data["current_user"],
-                            "Login":settings_data["current_login"],
-                            "Email":current_email_data
-                        }
-                    }
-                    request(requestConfig, (err, response, body) => {
-                        if (response.statusCode === 200) {
-                            $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
-                            setTimeout(() => {
-                                $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
-                                setupEventListeners()
-                            }, 3000)
-                        } else {
-                            //Email failed to send
-                            $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
-                            setTimeout(() => {
-                                $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
-                                setupEventListeners()
-                            }, 3000)
-                        }
-                    })
-                }
-            })
-        } else  {
-            swalAlert('Error', 'Please supply an email address.', 'error')
-            $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
-            setTimeout(() => {
-                $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
-                setupEventListeners()
-            }, 3000)
-        }
-
     })
 }
 
@@ -384,4 +340,63 @@ function swalAlert(title, body, icon) {
             }
         }
     })
+}
+
+function mobileSubmit() {
+    if ($("#vipermobileemail").val() != "") {
+        let settings_data, current_email_data = $("#vipermobileemail").val()
+        log.info("Viper for Mobile submit clicked")
+        log.info($("#vipermobileemail").val())
+        $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
+        fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), "utf8", function read(err, data) {
+            if (err) {
+                //Unable to read settings file
+            } else {
+                settings_data = JSON.parse(data)
+                log.info(data)
+                current_login_data = data
+                let requestConfig = {
+                    url: 'https://viper.dextronox.com/api/mobile',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    json: {
+                        "Name":settings_data["current_user"],
+                        "Login":settings_data["current_login"],
+                        "Email":current_email_data
+                    }
+                }
+                request(requestConfig, (err, response, body) => {
+                    if (response.statusCode === 200) {
+                        $("#vipermobile").html(`<center><p>Email sent successfully!</p></center>`)
+                        setTimeout(() => {
+                            $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                            $("#vipermobilesubmit").click(() => {
+                                mobileSubmit()
+                            })
+                        }, 3000)
+                    } else {
+                        //Email failed to send
+                        $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
+                        setTimeout(() => {
+                            $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+                            $("#vipermobilesubmit").click(() => {
+                                mobileSubmit()
+                            })
+                        }, 3000)
+                    }
+                })
+            }
+        })
+    } else  {
+        swalAlert('Error', 'Please supply an email address.', 'error')
+        $("#vipermobile").html(`<center><p>Email failed to send.</p></center>`)
+        setTimeout(() => {
+            $("#vipermobile").html(`<span><input type="email" id="vipermobileemail" name="email" class="email_form" placeholder="name@example.com" required></span><span><input type="submit" class="btn btn-success email_submit" id="vipermobilesubmit"></span>`)
+            $("#vipermobilesubmit").click(() => {
+                mobileSubmit()
+            })
+        }, 3000)
+    }
 }
