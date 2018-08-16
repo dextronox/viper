@@ -13,29 +13,29 @@ const swal = require("sweetalert")
 setupPage()
 
 function setupPage() {
-    fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), 'utf8', (err, data) => {
-        if (err) {
-            //If file doesn't exist, this is a first launch.
-            log.info("Could not read settings file. Perhaps it doesn't exist?")
-            //Create settings file.
-            fs.writeFile(path.resolve(__dirname, '../..', 'settings.json'), '{}', function (err) {
-                if (err) {
-                    swalAlert(`Error`, `Unable to create settings file. \r\nDetails of the error - ${err}`, `error`)
-                } else {
-                    log.info('Settings file created.')
-                }
-            })
-        } else {
-            //Check if current user is defined.
-            if (JSON.parse(data)["current_user"]) {
-                log.info("Currently logged in.")
-                main.connect()
-            } else {
-                log.info("Not logged in.")
-            }
+    // fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), 'utf8', (err, data) => {
+    //     if (err) {
+    //         //If file doesn't exist, this is a first launch.
+    //         log.info("Could not read settings file. Perhaps it doesn't exist?")
+    //         //Create settings file.
+    //         fs.writeFile(path.resolve(__dirname, '../..', 'settings.json'), '{}', function (err) {
+    //             if (err) {
+    //                 swalAlert(`Error`, `Unable to create settings file. \r\nDetails of the error - ${err}`, `error`)
+    //             } else {
+    //                 log.info('Settings file created.')
+    //             }
+    //         })
+    //     } else {
+    //         //Check if current user is defined.
+    //         if (JSON.parse(data)["current_user"]) {
+    //             log.info("Currently logged in.")
+    //             main.connect()
+    //         } else {
+    //             log.info("Not logged in.")
+    //         }
             
-        }
-    })
+    //     }
+    // })
     $('.message a').click(function(){
         $('form').animate({height: "toggle", opacity: "toggle"}, "slow");
     });
