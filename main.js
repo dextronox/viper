@@ -9,10 +9,10 @@ const path = require('path')
 const url = require('url')
 const log = require('electron-log')
 const fs = require('fs')
-const internetAvailable = require('internet-available')
 const notify = require('node-notifier')
 const os = require('os')
 const globalShortcut = electron.globalShortcut
+const isOnline = require('is-online');
 var windowCloseCheck = null, loginWindow = null, connectWindow = null, alertWindow = null, updateWindow = null, checkNetwork = null, ovpnCurrentConnection = null, tray = null, contextMenu = null, adminWindow = null
 
 
@@ -193,7 +193,7 @@ function createAlertWindow () {
     if (tray) {
         tray.destroy()
     }
-    alertWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Alert", resizable: false})
+    alertWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 350, transparent: false, title: "Viper Alert", resizable: false})
     alertWindow.setMenu(null)
     alertWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/alert/alert.html'),
@@ -222,7 +222,7 @@ function createUpdateWindow () {
     if (tray) {
         tray.destroy()
     }
-    updateWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Update", resizable: false})
+    updateWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 350, transparent: false, title: "Viper Update", resizable: false})
     updateWindow.setMenu(null)
     updateWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/update/update.html'),
@@ -291,7 +291,32 @@ app.on('ready', () => {
             networkCheck()
         }
     })
-    createLoginWindow()
+    fs.readFile(path.resolve(__dirname, 'settings.json'), 'utf8', (err, data) => {
+        if (err) {
+            //If file doesn't exist, this is a first launch.
+            log.info("Could not read settings file. Perhaps it doesn't exist?")
+            //Create settings file.
+            fs.writeFile(path.resolve(__dirname, 'settings.json'), '{}', function (err) {
+                if (err) {
+                    log.info(`Unable to create settings file. Details: ${err}`)
+                    createLoginWindow()
+                } else {
+                    log.info('Settings file created.')
+                    createLoginWindow()
+                }
+            })
+        } else {
+            //Check if current user is defined.
+            if (JSON.parse(data)["current_user"]) {
+                log.info("Currently logged in.")
+                createConnectWindow()
+            } else {
+                log.info("Not logged in.")
+                createLoginWindow()
+            }
+            
+        }
+    })
 })
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
@@ -351,7 +376,7 @@ ipcMain.on('connection', (event, args) => {
     }
 })
 
-//When requested, lets the connect window know whether OpenVPN is running.
+//When requested, lets the window know whether OpenVPN is running.
 ipcMain.on('checkIfConnected', (event, args) => {
     exec(`tasklist`, (error, stdout, stderr) => {
         if (error) {
@@ -372,14 +397,11 @@ ipcMain.on('checkIfConnected', (event, args) => {
 
 function ovpnConnection(connect, callback) {
     let ovpnPath
-    if (os.arch() === "x64") {
+    if (os.platform() === "win32") {
         ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
         log.info(`OpenVPN directory set to ${ovpnPath}`)
-    } else if (os.arch() === "ia32") {
-        ovpnPath = "C:\\Program Files\\OpenVPN\\bin"
-        log.info(`OpenVPN directory set to ${ovpnPath}`)
     } else {
-        log.error("Arch check fail")
+        log.error("Unsupported OS")
     }
     if (connect === "connect") {
         log.info(`Starting OpenVPN connection.`)
@@ -426,6 +448,17 @@ function ovpnConnection(connect, callback) {
                     message: `Viper has unexpectedly disconnected. We will now try to reconnect you.`,
                     icon: path.resolve(__dirname, 'icons', 'icon.ico')
                 });
+            }
+            if (data.includes('All TAP-Windows adapters on this system are currently in use.')) {
+                log.info(`There is another program (VPN) connected to the TAP adaptor.`)
+                checkNetwork = 0
+                if (connectWindow) {
+                    connectWindow.webContents.send('connection', {connection: 2});
+                }
+                if (callback) {
+                    callback()
+                }
+                ovpnConnection("disconnect")
             }
         })
         ovpnCurrentConnection.stderr.on('data', (data) => {
@@ -475,35 +508,33 @@ function ovpnConnection(connect, callback) {
 
 function networkCheck () {
     if (checkNetwork === 1) {
-        internetAvailable({
-            timeout: 5000,
-            retires: 10
-        }).then(() => {
-            log.verbose("Internet connection detected.")
-            setTimeout(() => {networkCheck()}, 1000)
-        }).catch(() => {
-            log.info("No internet connection detected.")
-            notify.notify({
-                title: 'Viper VPN Alert',
-                message: `We've detected that you've lost connection to the internet. To prevent any issues getting back online, we've disconnected Viper. Once you're back online, you can reconnect.`,
-                icon: path.resolve(__dirname, 'icons', 'icon.ico')
-            });
-            exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
-                if (error) {
-                    log.error(`Error disconnecting from OpenVPN: ${error}`)
-                    if (connectWindow) {
-                        connectWindow.webContents.send('networkCheckDisconnect', {connection: 1});
+        isOnline({timeout: 10000}).then(online => {
+            if (online === true) {
+                log.verbose("Internet connection detected.")
+                setTimeout(() => {networkCheck()}, 1000)
+            } else {
+                log.info("No internet connection detected.")
+                notify.notify({
+                    title: 'Viper VPN Alert',
+                    message: `We've detected that you've lost connection to the internet. To prevent any issues getting back online, we've disconnected Viper. Once you're back online, you can reconnect.`,
+                    icon: path.resolve(__dirname, 'icons', 'icon.ico')
+                });
+                exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+                    if (error) {
+                        log.error(`Error disconnecting from OpenVPN: ${error}`)
+                        if (connectWindow) {
+                            connectWindow.webContents.send('networkCheckDisconnect', {connection: 1});
+                        }
+                        
+                    } else {
+                        log.info(`OpenVPN stdout: ${stdout}`)
+                        log.info(`OpenVPN stderr: ${stderr}`)
+                        if (connectWindow) {
+                            connectWindow.webContents.send('networkCheckDisconnect', {connection: 0});
+                        }
                     }
-                    
-                } else {
-                    log.info(`OpenVPN stdout: ${stdout}`)
-                    log.info(`OpenVPN stderr: ${stderr}`)
-                    if (connectWindow) {
-                        log.info('TEST')
-                        connectWindow.webContents.send('networkCheckDisconnect', {connection: 0});
-                    }
-                }
-            })
+                })
+            }
         })
     }
 
