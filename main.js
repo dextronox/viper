@@ -275,9 +275,9 @@ function createAdminWindow () {
         alertWindow.close()
         alertWindow = null
     }
-    if (connectWindow != null) {
-        connectWindow.close()
-        connectWindow = null
+    if (updateWindow != null) {
+        updateWindow.close()
+        updateWindow = null
     }
 }
 
