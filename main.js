@@ -87,6 +87,46 @@ function handleSquirrelEvent() {
 
 //Squirrel above this point.
 
+//This ensures only one instance of Viper is open
+var shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) {
+    // Someone tried to run a second instance, we should focus our window.
+    if (loginWindow) {
+        if (loginWindow.isMinimized()) {
+            loginWindow.restore();
+        }
+        loginWindow.focus();
+    }
+    if (connectWindow) {
+        if (connectWindow.isMinimized()) {
+            connectWindow.restore();
+        }
+        connectWindow.focus();
+        connectWindow.show()
+    }
+    if (alertWindow) {
+        if (alertWindow.isMinimized()) {
+            alertWindow.restore();
+        }
+        alertWindow.focus();
+    }
+    if (updateWindow) {
+        if (updateWindow.isMinimized()) {
+            updateWindow.restore();
+        }
+        updateWindow.focus();
+    }
+    if (adminWindow) {
+        if (adminWindow.isMinimized()) {
+            adminWindow.restore();
+        }
+        adminWindow.focus();
+    }
+});
+if (shouldQuit) {
+    app.quit();
+    return;
+}
+
 // Same as for console transport
 log.transports.file.level = 'info';
 log.transports.file.format = '{h}:{i}:{s}:{ms} {text}';
@@ -110,7 +150,7 @@ function createLoginWindow () {
     if (tray) {
         tray.destroy()
     }
-    loginWindow = new BrowserWindow({width: 800, height: 600, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 600, transparent: false, title: "Viper Login", resizable: false})
+    loginWindow = new BrowserWindow({show: false, width: 800, height: 600, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 600, transparent: false, title: "Viper Login", resizable: false})
     loginWindow.setMenu(null)
     loginWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/login/login.html'),
@@ -121,24 +161,27 @@ function createLoginWindow () {
     loginWindow.on('closed', function () {
         loginWindow = null
     })
-    if (connectWindow != null) {
-        windowCloseCheck = 1
-        connectWindow.close()
-        connectWindow = null
-    }
-    if (alertWindow != null) {
-        loginWindow.close()
-        loginWindow = null
-    }
-    if (updateWindow != null) {
-        updateWindow.close()
-        updateWindow = null
-    }
+    loginWindow.webContents.on('did-finish-load', function() {
+        loginWindow.show()
+        if (connectWindow != null) {
+            windowCloseCheck = 1
+            connectWindow.close()
+            connectWindow = null
+        }
+        if (alertWindow != null) {
+            loginWindow.close()
+            loginWindow = null
+        }
+        if (updateWindow != null) {
+            updateWindow.close()
+            updateWindow = null
+        }
+    });
 }
 
 function createConnectWindow () {
     windowCloseCheck = null
-    connectWindow = new BrowserWindow({width: 830, height: 750, icon: path.resolve(__dirname, 'icons', 'icon.ico'), transparent: false, title: "Viper Connect", resizable: false})
+    connectWindow = new BrowserWindow({show: false, width: 830, height: 750, icon: path.resolve(__dirname, 'icons', 'icon.ico'), transparent: false, title: "Viper Connect", resizable: false})
     connectWindow.setMenu(null)
     connectWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/connect/connect.html'),
@@ -175,25 +218,29 @@ function createConnectWindow () {
     tray.on('click', () => {
         connectWindow.show()
     })
-    if (alertWindow != null) {
-        alertWindow.close()
-        alertWindow = null
-    }
-    if (loginWindow != null) {
-        loginWindow.close()
-        loginWindow = null
-    }
-    if (updateWindow != null) {
-        updateWindow.close()
-        updateWindow = null
-    }
+    connectWindow.webContents.on('did-finish-load', function() {
+        connectWindow.show()
+        if (alertWindow != null) {
+            alertWindow.close()
+            alertWindow = null
+        }
+        if (loginWindow != null) {
+            loginWindow.close()
+            loginWindow = null
+        }
+        if (updateWindow != null) {
+            updateWindow.close()
+            updateWindow = null
+        }
+    })
+
 }
 
 function createAlertWindow () {
     if (tray) {
         tray.destroy()
     }
-    alertWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 350, transparent: false, title: "Viper Alert", resizable: false})
+    alertWindow = new BrowserWindow({show: false, width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 350, transparent: false, title: "Viper Alert", resizable: false})
     alertWindow.setMenu(null)
     alertWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/alert/alert.html'),
@@ -204,25 +251,29 @@ function createAlertWindow () {
     alertWindow.on('closed', function () {
         alertWindow = null
     })
-    if (connectWindow != null) {
-        windowCloseCheck = 1
-        connectWindow.close()
-        connectWindow = null
-    }
-    if (loginWindow != null) {
-        loginWindow.close()
-        loginWindow = null
-    }
-    if (updateWindow != null) {
-        updateWindow.close()
-        updateWindow = null
-    }
+    alertWindow.webContents.on('did-finish-load', () => {
+        alertWindow.show()
+        if (connectWindow != null) {
+            windowCloseCheck = 1
+            connectWindow.close()
+            connectWindow = null
+        }
+        if (loginWindow != null) {
+            loginWindow.close()
+            loginWindow = null
+        }
+        if (updateWindow != null) {
+            updateWindow.close()
+            updateWindow = null
+        }
+    })
+
 }
 function createUpdateWindow () {
     if (tray) {
         tray.destroy()
     }
-    updateWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 350, transparent: false, title: "Viper Update", resizable: false})
+    updateWindow = new BrowserWindow({show: false, width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 350, transparent: false, title: "Viper Update", resizable: false})
     updateWindow.setMenu(null)
     updateWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/update/update.html'),
@@ -233,25 +284,28 @@ function createUpdateWindow () {
     updateWindow.on('closed', function () {
         updateWindow = null
     })
-    if (connectWindow != null) {
-        windowCloseCheck = 1
-        connectWindow.close()
-        connectWindow = null
-    }
-    if (loginWindow != null) {
-        loginWindow.close()
-        loginWindow = null
-    }
-    if (alertWindow != null) {
-        alertWindow.close()
-        alertWindow = null
-    }
+    updateWindow.webContents.on('did-finish-load', () => {
+        updateWindow.show()
+        if (connectWindow != null) {
+            windowCloseCheck = 1
+            connectWindow.close()
+            connectWindow = null
+        }
+        if (loginWindow != null) {
+            loginWindow.close()
+            loginWindow = null
+        }
+        if (alertWindow != null) {
+            alertWindow.close()
+            alertWindow = null
+        }
+    })
 }
 function createAdminWindow () {
     if (tray) {
         tray.destroy()
     }
-    adminWindow = new BrowserWindow({width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Error", resizable: false})
+    adminWindow = new BrowserWindow({show: false, width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Error", resizable: false})
     adminWindow.setMenu(null)
     adminWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/admin/admin.html'),
@@ -262,23 +316,27 @@ function createAdminWindow () {
     adminWindow.on('closed', function () {
         adminWindow = null
     })
-    if (connectWindow != null) {
-        windowCloseCheck = 1
-        connectWindow.close()
-        connectWindow = null
-    }
-    if (loginWindow != null) {
-        loginWindow.close()
-        loginWindow = null
-    }
-    if (alertWindow != null) {
-        alertWindow.close()
-        alertWindow = null
-    }
-    if (updateWindow != null) {
-        updateWindow.close()
-        updateWindow = null
-    }
+    adminWindow.webContents.on('did-finish-load' , () => {
+        adminWindow.show()
+        if (connectWindow != null) {
+            windowCloseCheck = 1
+            connectWindow.close()
+            connectWindow = null
+        }
+        if (loginWindow != null) {
+            loginWindow.close()
+            loginWindow = null
+        }
+        if (alertWindow != null) {
+            alertWindow.close()
+            alertWindow = null
+        }
+        if (updateWindow != null) {
+            updateWindow.close()
+            updateWindow = null
+        }
+    })
+
 }
 
 app.on('ready', () => {
@@ -287,8 +345,8 @@ app.on('ready', () => {
             log.error(`Could not check if OpenVPN is running. ${error}`)
         } else if (stdout.includes('openvpn.exe')) {
             log.info('openvpn.exe is running. Beginning network check.')
-            checkNetwork = 1
-            networkCheck()
+            //checkNetwork = 1
+            //networkCheck()
         }
     })
     fs.readFile(path.resolve(__dirname, 'settings.json'), 'utf8', (err, data) => {
@@ -413,8 +471,8 @@ function ovpnConnection(connect, callback) {
             if (data.includes('Initialization Sequence Completed')) {
                 log.info(`OpenVPN Connected!`)
                 if (checkNetwork === 0 || !checkNetwork) {
-                    checkNetwork = 1
-                    networkCheck()
+                    //checkNetwork = 1
+                    //networkCheck()
                 }
                 if (connectWindow) {
                     connectWindow.webContents.send('connection', {connection: 1});
@@ -425,7 +483,7 @@ function ovpnConnection(connect, callback) {
             }
             if (data.includes('SIGUSR1[connection failed(soft),init_instance]')) {
                 log.info(`OpenVPN failed to connect.`)
-                checkNetwork = 0
+                //checkNetwork = 0
                 if (connectWindow) {
                     connectWindow.reload()
                 }
@@ -434,9 +492,25 @@ function ovpnConnection(connect, callback) {
                 }
                 ovpnConnection("disconnect")
             }
+            if (data.includes('SIGUSR1[soft,connection-reset]')) {
+                log.info(`OpenVPN has been abruptly disconnected.`)
+                //checkNetwork = 0
+                if (connectWindow) {
+                    connectWindow.reload()
+                }
+                if (callback) {
+                    callback()
+                }
+                notify.notify({
+                    title: 'Viper VPN Alert',
+                    message: `Viper has unexpectedly disconnected. This is probably because you have lost connection to the internet.`,
+                    icon: path.resolve(__dirname, 'icons', 'icon.ico')
+                });
+                ovpnConnection("disconnect")
+            }
             if (data.includes('Closing TUN/TAP interface')) {
                 log.info(`OpenVPN has disconnected on its own.`)
-                checkNetwork = 0
+                //checkNetwork = 0
                 if (connectWindow) {
                     connectWindow.webContents.send('connectionLost', {connection: 0});
                 }
@@ -451,7 +525,7 @@ function ovpnConnection(connect, callback) {
             }
             if (data.includes('All TAP-Windows adapters on this system are currently in use.')) {
                 log.info(`There is another program (VPN) connected to the TAP adaptor.`)
-                checkNetwork = 0
+                //checkNetwork = 0
                 if (connectWindow) {
                     connectWindow.webContents.send('connection', {connection: 2});
                 }
@@ -469,7 +543,7 @@ function ovpnConnection(connect, callback) {
             if (connectWindow) {
                 connectWindow.webContents.send('connection', {connection: 0});
             }
-            checkNetwork = 0
+            //checkNetwork = 0
         })
     } else if (connect === "disconnect") {
         log.info(`Starting OpenVPN disconnection.`)
@@ -479,7 +553,7 @@ function ovpnConnection(connect, callback) {
                 //Error was reported because the VPN was not connected to begin with. This is a safe error.
                 log.info(`OpenVPN stdout: ${stdout}`)
                 log.info(`OpenVPN stderr: ${stderr}`)
-                checkNetwork = 0
+                //checkNetwork = 0
                 if (connectWindow) {
                     connectWindow.webContents.send('connection', {connection: 0});
                 }     
@@ -494,7 +568,7 @@ function ovpnConnection(connect, callback) {
             } else {
                 log.info(`OpenVPN stdout: ${stdout}`)
                 log.info(`OpenVPN stderr: ${stderr}`)
-                checkNetwork = 0
+                //checkNetwork = 0
                 if (connectWindow) {
                     connectWindow.webContents.send('connection', {connection: 0});
                 }
@@ -506,37 +580,37 @@ function ovpnConnection(connect, callback) {
     }
 }
 
-function networkCheck () {
-    if (checkNetwork === 1) {
-        isOnline({timeout: 10000}).then(online => {
-            if (online === true) {
-                log.verbose("Internet connection detected.")
-                setTimeout(() => {networkCheck()}, 1000)
-            } else {
-                log.info("No internet connection detected.")
-                notify.notify({
-                    title: 'Viper VPN Alert',
-                    message: `We've detected that you've lost connection to the internet. To prevent any issues getting back online, we've disconnected Viper. Once you're back online, you can reconnect.`,
-                    icon: path.resolve(__dirname, 'icons', 'icon.ico')
-                });
-                exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
-                    if (error) {
-                        log.error(`Error disconnecting from OpenVPN: ${error}`)
-                        if (connectWindow) {
-                            connectWindow.webContents.send('networkCheckDisconnect', {connection: 1});
-                        }
+// function networkCheck () {
+//     if (checkNetwork === 1) {
+//         isOnline({timeout: 10000}).then(online => {
+//             if (online === true) {
+//                 log.verbose("Internet connection detected.")
+//                 setTimeout(() => {networkCheck()}, 1000)
+//             } else {
+//                 log.info("No internet connection detected.")
+//                 notify.notify({
+//                     title: 'Viper VPN Alert',
+//                     message: `We've detected that you've lost connection to the internet. To prevent any issues getting back online, we've disconnected Viper. Once you're back online, you can reconnect.`,
+//                     icon: path.resolve(__dirname, 'icons', 'icon.ico')
+//                 });
+//                 exec(`taskkill /IM openvpn.exe /F`, (error, stdout, stderr) => {
+//                     if (error) {
+//                         log.error(`Error disconnecting from OpenVPN: ${error}`)
+//                         if (connectWindow) {
+//                             connectWindow.webContents.send('networkCheckDisconnect', {connection: 1});
+//                         }
                         
-                    } else {
-                        log.info(`OpenVPN stdout: ${stdout}`)
-                        log.info(`OpenVPN stderr: ${stderr}`)
-                        if (connectWindow) {
-                            connectWindow.webContents.send('networkCheckDisconnect', {connection: 0});
-                        }
-                    }
-                })
-            }
-        })
-    }
+//                     } else {
+//                         log.info(`OpenVPN stdout: ${stdout}`)
+//                         log.info(`OpenVPN stderr: ${stderr}`)
+//                         if (connectWindow) {
+//                             connectWindow.webContents.send('networkCheckDisconnect', {connection: 0});
+//                         }
+//                     }
+//                 })
+//             }
+//         })
+//     }
 
-}
+// }
 
