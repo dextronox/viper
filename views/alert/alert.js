@@ -65,7 +65,6 @@ function downloadUpdate() {
 
 function runUpdate() {
     log.info("Beginning update.")
-    let close = 0
     log.info(`Running ${executablePath}`)
     sudo.exec(`start /D "${executablePath}" ovpninstaller.exe`, sudoOptions, (err, stdout, stderr) => {
         if (err) {
