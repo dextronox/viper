@@ -52,6 +52,12 @@ body {
 .email_submit {
     width: 100%;
 }
+.alertmessage {
+    display: none;
+    font-size: 1.5em;
+    margin-bottom: -2.70em;
+    text-align: center;
+}
 span {
     display: block;
 }
