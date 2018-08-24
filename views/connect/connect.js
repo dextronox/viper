@@ -13,9 +13,6 @@ const request = require('request')
 const log = require('electron-log')
 const os = require('os')
 var $ = jQuery = require('jquery');
-var options = {
-    name: 'Viper'
-}
 const swal = require("sweetalert")
 const isAdmin = require('is-admin')
 let ovpnPath
@@ -62,12 +59,27 @@ function environmentSetup() {
         log.error("Arch check fail")
     }
     //This is technically a display thing, but it doesn't need to run everytime a button is clicked.
+    let requestConfigAlert = {
+        url: `https://viper.dextronox.com/alerts/connectWindowAlert?${Math.floor(Math.random() * Math.floor(300))}`,
+        method: 'GET',
+    }
+    request(requestConfigAlert, (err, response, body) => {
+        if (err || response.statusCode != 200) {
+            log.error(`Unable to get connectWindowAlert.html. It's possible it doesn't exist, which is fine. Error: ${err}`)
+        } else if (body) {
+            log.info(`Alert message set to: ${body}`)
+            $("#alertMessageDivider").css('display', 'block')
+            $("#alertMessage").html(body)
+        } else {
+            log.info(`No alert message to display.`)
+        }
+    })
     $("#version").html(`${remote.app.getVersion()}`)
-    let requestConfig = {
+    let requestConfigVersion = {
         url: `https://viper.dextronox.com/ver/?${Math.floor(Math.random() * Math.floor(300))}`,
         method: 'GET',
     }
-    request(requestConfig, (err, response, body) => {
+    request(requestConfigVersion, (err, response, body) => {
         log.info(`Local version for comparison: ${parseFloat(remote.app.getVersion())}`)
         log.info(`Remote version for comparison: ${parseFloat(body)}`)
         log.info(`Newest version: ${parseFloat(body) <= parseFloat(remote.app.getVersion())}`)
@@ -197,7 +209,7 @@ function setupDisplay() {
                     } else {
                         log.error(`An unknown error occurred whilst trying to get data from UptimeRobot. Error: ${error}`)
                         $("#connection").html('<button id="refresh" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Refresh</button>')
-                        swalAlert('An Error Occurred', 'We were unable to determine whether Viper is online. This error has been logged.', 'error')
+                        swalAlert('Are You Online?', 'We were unable to determine whether Viper is online. Please check your internet connection and try again.', 'error')
                         setupEventListeners()
                     }
                 } else {
