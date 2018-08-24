@@ -1,11 +1,12 @@
 {
     "src": "dist/Viper-win32-x64/",
     "dest": "dist/installers/x64/",
-    "name": "viper",
+    "name": "Viper",
     "productName": "Viper VPN",
     "description": "Viper VPN Client",
     "copyright": "MIT License",
     "homepage": "https://viper.dextronox.com",
     "icon": "icons/icon.ico",
-    "noMsi": true
+    "noMsi": true,
+    "animation": "icons/installing.gif"
 }
