@@ -14,7 +14,6 @@ const log = require('electron-log')
 const os = require('os')
 var $ = jQuery = require('jquery');
 const swal = require("sweetalert")
-const isAdmin = require('is-admin')
 let ovpnPath
 
 environmentSetup()
@@ -44,20 +43,6 @@ function environmentSetup() {
     $("#viper-logo").click(() => {
         getCurrentWindow().reload()
     })
-    isAdmin().then((admin) => {
-        if (!admin) {
-            main.admin()
-        }
-    })
-    if (os.arch() === "x64") {
-        ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
-        log.info(`OpenVPN directory set to ${ovpnPath}`)
-    } else if (os.arch() === "ia32") {
-        ovpnPath = "C:\\Program Files\\OpenVPN\\bin"
-        log.info(`OpenVPN directory set to ${ovpnPath}`)
-    } else {
-        log.error("Arch check fail")
-    }
     //This is technically a display thing, but it doesn't need to run everytime a button is clicked.
     let requestConfigAlert = {
         url: `https://viper.dextronox.com/alerts/connectWindowAlert?${Math.floor(Math.random() * Math.floor(300))}`,
@@ -154,19 +139,11 @@ function environmentSetup() {
         }
 
     })
-    cmd.get(`"${ovpnPath}\\openvpn.exe" --version`, (err, data, stderr) => {
-        if (!data.includes("built on")) {
-            log.info(`No OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
-            log.info(data)
-            main.alert()
-        } else {
-            log.info("OpenVPN install found!")
-            setupDisplay()
-        }
-    })
+    setupDisplay()
 }
 
 function setupDisplay() {
+    $("img").on('dragstart', function(event) { event.preventDefault(); });
     fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), function read(err, data) {
         if (err) {
             log.error(error)
@@ -242,7 +219,7 @@ function setupEventListeners () {
     })
     $("#connect").click(function() {
         log.info("Connect clicked")
-        $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
+        $("#connection").html(`<center><div class="center la-ball-beat la-3x"><div></div><div></div><div></div></div></center>`)
         ipcRenderer.send('connection', 1)
         ipcRenderer.once('connection', (event, args) => {
             if (args.connection === 1) {
@@ -266,7 +243,7 @@ function setupEventListeners () {
     })
     $("#disconnect").click(function() {
         log.info("Disconnect clicked")
-        $("#connection").html(`<center><div class="la-ball-beat la-dark la-3x"><div></div><div></div><div></div></div></center>`)
+        $("#connection").html(`<center><div class="center la-ball-beat la-3x"><div></div><div></div><div></div></div></center>`)
         ipcRenderer.send('connection', 0)
         ipcRenderer.once('connection', (event, args) => {
             if (args.connection === 1) {
@@ -359,7 +336,7 @@ function mobileSubmit() {
         let settings_data, current_email_data = $("#vipermobileemail").val()
         log.info("Viper for Mobile submit clicked")
         log.info($("#vipermobileemail").val())
-        $("#vipermobile").html(`<center><div class="la-ball-beat la-dark la-2x"><div></div><div></div><div></div></div></center>`)
+        $("#vipermobile").html(`<center><div class="center la-ball-beat la-2x"><div></div><div></div><div></div></div></center>`)
         fs.readFile(path.resolve(__dirname, '../..', 'settings.json'), "utf8", function read(err, data) {
             if (err) {
                 //Unable to read settings file

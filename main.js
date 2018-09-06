@@ -13,7 +13,8 @@ const notify = require('node-notifier')
 const os = require('os')
 const globalShortcut = electron.globalShortcut
 const isOnline = require('is-online');
-var windowCloseCheck = null, loginWindow = null, connectWindow = null, alertWindow = null, updateWindow = null, checkNetwork = null, ovpnCurrentConnection = null, tray = null, contextMenu = null, adminWindow = null
+const isAdmin = require('is-admin')
+var windowCloseCheck = null, loginWindow = null, connectWindow = null, alertWindow = null, updateWindow = null, checkNetwork = null, ovpnCurrentConnection = null, tray = null, contextMenu = null, adminWindow = null, ovpnCheck = null
 
 
 //Squirrel
@@ -305,7 +306,7 @@ function createAdminWindow () {
     if (tray) {
         tray.destroy()
     }
-    adminWindow = new BrowserWindow({show: false, width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 450, transparent: false, title: "Viper Error", resizable: false})
+    adminWindow = new BrowserWindow({show: false, width: 800, height: 350, icon: path.resolve(__dirname, 'icons', 'icon.ico'), 'minWidth': 800, 'minHeight': 350, transparent: false, title: "Viper Error", resizable: false})
     adminWindow.setMenu(null)
     adminWindow.loadURL(url.format({
         pathname: path.join(__dirname, 'views/admin/admin.html'),
@@ -340,6 +341,13 @@ function createAdminWindow () {
 }
 
 app.on('ready', () => {
+    let ovpnPath
+    if (os.platform() === "win32") {
+        ovpnPath = `C:\\Program Files\\OpenVPN\\bin`
+        log.info(`OpenVPN directory set to ${ovpnPath}`)
+    } else {
+        log.error("Unsupported OS")
+    }
     exec(`tasklist`, (error, stdout, stderr) => {
         if (error) {
             log.error(`Could not check if OpenVPN is running. ${error}`)
@@ -357,20 +365,80 @@ app.on('ready', () => {
             fs.writeFile(path.resolve(__dirname, 'settings.json'), '{}', function (err) {
                 if (err) {
                     log.info(`Unable to create settings file. Details: ${err}`)
-                    createLoginWindow()
+                    isAdmin().then((admin) => {
+                        if (!admin) {
+                            createAdminWindow()
+                        } else {
+                            exec(`"${ovpnPath}\\openvpn.exe" --version`, (error, stdout, stderr) => {
+                                if (!stdout.includes('built on')) {
+                                    log.info(`No OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                    log.info(data)
+                                    createAlertWindow()
+                                } else {
+                                    log.info(`OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                    createLoginWindow()
+                                }
+                            })
+                        }
+                    })
                 } else {
                     log.info('Settings file created.')
-                    createLoginWindow()
+                    isAdmin().then((admin) => {
+                        if (!admin) {
+                            createAdminWindow()
+                        } else {
+                            exec(`"${ovpnPath}\\openvpn.exe" --version`, (error, stdout, stderr) => {
+                                if (!stdout.includes('built on')) {
+                                    log.info(`No OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                    log.info(data)
+                                    createAlertWindow()
+                                } else {
+                                    log.info(`OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                    createLoginWindow()
+                                }
+                            })
+                        }
+                    })
                 }
             })
         } else {
             //Check if current user is defined.
             if (JSON.parse(data)["current_user"]) {
                 log.info("Currently logged in.")
-                createConnectWindow()
+                isAdmin().then((admin) => {
+                    if (!admin) {
+                        createAdminWindow()
+                    } else {
+                        exec(`"${ovpnPath}\\openvpn.exe" --version`, (error, stdout, stderr) => {
+                            if (!stdout.includes('built on')) {
+                                log.info(`No OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                log.info(data)
+                                createAlertWindow()
+                            } else {
+                                log.info(`OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                createConnectWindow()
+                            }
+                        })
+                    }
+                })
             } else {
                 log.info("Not logged in.")
-                createLoginWindow()
+                isAdmin().then((admin) => {
+                    if (!admin) {
+                        createAdminWindow()
+                    } else {
+                        exec(`"${ovpnPath}\\openvpn.exe" --version`, (error, stdout, stderr) => {
+                            if (!stdout.includes('built on')) {
+                                log.info(`No OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                log.info(data)
+                                createAlertWindow()
+                            } else {
+                                log.info(`OpenVPN install found at "${ovpnPath}\\openvpn.exe"`)
+                                createLoginWindow()
+                            }
+                        })
+                    }
+                })
             }
             
         }
