@@ -186,7 +186,7 @@ function setupDisplay() {
                     } else {
                         log.error(`An unknown error occurred whilst trying to get data from UptimeRobot. Error: ${error}`)
                         $("#connection").html('<button id="refresh" type="button" class="btn btn-danger btn-lg btn-block connectdisconnect">Refresh</button>')
-                        swalAlert('Are You Online?', 'We were unable to determine whether Viper is online. Please check your internet connection and try again.', 'error')
+                        swalAlert('Are you Online?', 'We were unable to determine whether Viper is online. Please check your internet connection and try again.', 'error')
                         setupEventListeners()
                     }
                 } else {
